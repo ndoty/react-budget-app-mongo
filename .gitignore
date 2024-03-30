@@ -4,8 +4,9 @@
 .env
 
 # dependencies
-/node_modules
-/.pnp
+server/node_modules
+client/node_modules
+*/.pnp
 .pnp.js
 
 # testing
