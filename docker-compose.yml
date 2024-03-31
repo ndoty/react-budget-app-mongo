@@ -1,22 +1,44 @@
 version: "3"
 services:
   frontend:
-    container_name: react-budget-app-mongo-client
+    env_file: ./.env
+    container_name: budget.tns-client
     build:
-        context: ./client
-        dockerfile: Dockerfile
-    # image: vikasraj/awesome_web
+      context: ./client
+      dockerfile: Dockerfile
+    environment:
+      PORT: ${CLIENT_PORT}
     ports:
-        - "3001:3000"
+      - ${CLIENT_PORT}:${CLIENT_PORT}
+    networks:
+      Web-Budget-App:
+        aliases:
+          - frontend
     volumes:
-        - ./client:/usr/src/app
+      - ./client:/usr/src/app
+    links:
+      - backend
+    depends_on:
+      - backend
   backend:
-    container_name: react-budget-app-mongo-server
+    env_file: ./.env
+    container_name: budget.tns-server
     build:
-        context: ./server
-        dockerfile: Dockerfile
-    # image: vikasraj/awesome_server
+      context: ./server
+      dockerfile: Dockerfile
+    environment:
+      PORT: ${SERVER_PORT}
+      MONGO_USER: ${MONGO_USER}
+      MONGO_PASS: ${MONGO_PASS}
     ports:
-        - "5001:5000"
+      - ${SERVER_PORT}:${SERVER_PORT}
+    networks:
+      Web-Budget-App:
+        aliases:
+          - backend
     volumes:
-        - ./server:/usr/src/app
+      - ./server:/usr/src/app
+
+networks:
+  Web-Budget-App:
+    external: true

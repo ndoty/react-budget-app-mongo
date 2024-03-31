@@ -3,6 +3,9 @@
 # Ignore .env
 .env
 
+# Ignore client build
+client/build
+
 # dependencies
 server/node_modules
 client/node_modules

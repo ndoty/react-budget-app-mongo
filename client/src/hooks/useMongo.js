@@ -3,7 +3,7 @@ import { useState, useEffect } from "react"
 
 const fetchData = async (key) => {
   try {
-    const response = await Axios.get(`http://localhost:5000/api/${key}`)
+    const response = await Axios.get(`//budget-api.technickservices.com/api/${key}`)
     return response.data
   } catch (error) {
     console.error("Error fetching data:", error)
@@ -13,7 +13,7 @@ const fetchData = async (key) => {
 
 const postData = async (key, data) => {
   try {
-    const response = await Axios.post(`http://localhost:5000/api/${key}`, { data })
+    const response = await Axios.post(`//budget-api.technickservices.com/api/${key}`, { data })
   } catch (error) {
     console.error("Error fetching data:", error)
     return null

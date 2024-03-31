@@ -1,9 +1,11 @@
 FROM node:lts-slim
 
+ENV PORT=3000
+
 RUN mkdir -p /usr/src/app
 
 WORKDIR /usr/src/app
 
-EXPOSE 3000
+EXPOSE ${PORT}
 
-CMD [ "npm", "start" ]
+CMD [ "npm", "run", "start" ]

@@ -30,7 +30,7 @@ function App() {
         <Stack direction="horizontal" gap="2" className="mb-4">
           <h1 className="me-auto">Budgets</h1>
           <Button variant="outline-primary" onClick={() => setShowFixedMonthlyTotalModal(true)}>
-            Add Fixed Monthly Cap
+            Add Monthly Cap
           </Button>          
           <Button variant="primary" onClick={() => setShowAddBudgetModal(true)}>
             Add Budget
