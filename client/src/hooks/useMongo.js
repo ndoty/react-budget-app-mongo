@@ -1,9 +1,11 @@
 import Axios from "axios"
 import { useState, useEffect } from "react"
 
+const apiURL = "//budget-api.technickservices.com/api/"
+
 const fetchData = async (key) => {
   try {
-    const response = await Axios.get(`//budget-api.technickservices.com/api/${key}`)
+    const response = await Axios.get(`${apiURL}${key}`)
     return response.data
   } catch (error) {
     console.error("Error fetching data:", error)
@@ -13,7 +15,7 @@ const fetchData = async (key) => {
 
 const postData = async (key, data) => {
   try {
-    const response = await Axios.post(`//budget-api.technickservices.com/api/${key}`, { data })
+    const response = await Axios.post(`${apiURL}${key}`, { data })
   } catch (error) {
     console.error("Error fetching data:", error)
     return null
