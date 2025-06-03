@@ -1,7 +1,7 @@
 // client/src/contexts/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container } from "react-bootstrap"; // For the AuthProvider's own loading message
+import { Container } from "react-bootstrap"; // For AuthProvider's own loading message
 
 const API_URL = process.env.REACT_APP_API_URL || "//localhost:5000/api";
 
@@ -9,10 +9,10 @@ const defaultAuthContextValue = {
   token: null,
   currentUser: null,
   isAuthenticated: false,
-  loading: true, // Consumers expect this to be true initially
-  login: async () => { throw new Error("Login not ready"); },
-  register: async () => { throw new Error("Register not ready"); },
-  logout: () => { throw new Error("Logout not ready"); },
+  loading: true, // Consumers see this as true initially
+  login: async () => ({ success: false, message: 'Auth not ready' }),
+  register: async () => ({ success: false, message: 'Auth not ready' }),
+  logout: () => {},
 };
 
 const AuthContext = createContext(defaultAuthContextValue);
@@ -22,39 +22,38 @@ export function useAuth() {
 }
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(null); // Initialize as null
+  const [token, setToken] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-  const [internalLoading, setInternalLoading] = useState(true); // AuthProvider's own loading
+  const [internalLoading, setInternalLoading] = useState(true); // AuthProvider's own setup loading
 
   useEffect(() => {
-    console.log("AuthProvider: Initialization Effect - Start");
+    console.log("AuthProvider: Mount & Initial Effect - START");
+    // Simulate a quick check (like reading localStorage)
     const storedToken = localStorage.getItem('token');
     const storedUserString = localStorage.getItem('currentUser');
 
     if (storedToken) {
-      setToken(storedToken); // This will trigger the axios header update via the other useEffect
+      setToken(storedToken); // Will trigger header update via separate useEffect
       if (storedUserString) {
         try {
           setCurrentUser(JSON.parse(storedUserString));
         } catch (e) {
-          console.error("AuthProvider: Error parsing stored currentUser", e);
-          localStorage.removeItem('currentUser'); // Clear corrupted data
+          localStorage.removeItem('currentUser');
           setCurrentUser(null);
         }
-      } else {
-        setCurrentUser(null); // No stored user
       }
     } else {
-      // No token, ensure currentUser is null and axios header is clear
-      setCurrentUser(null);
-      delete axios.defaults.headers.common['Authorization'];
+      setCurrentUser(null); // Explicitly set to null if no token
     }
-    console.log("AuthProvider: Initialization Effect - Setting internalLoading to false");
+
+    // This is the most important part for this issue:
+    // Ensure internalLoading becomes false AFTER initial setup.
+    console.log("AuthProvider: Initial Effect - Setting internalLoading to false.");
     setInternalLoading(false);
-  }, []); // Runs once on mount
+
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   useEffect(() => {
-    // Manages Axios header based on token changes
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     } else {
@@ -62,61 +61,56 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
+  // LOGIN, REGISTER, LOGOUT functions (ensure they are complete as per previous versions)
   const login = async (username, password) => {
-    // Omitted for brevity, should be same as previous functional version
-    // Ensure it sets token and currentUser, and localStorage
     try {
       const res = await axios.post(`${API_URL}/auth/login`, { username, password });
       localStorage.setItem('token', res.data.token);
       const userData = { id: res.data.userId, username: res.data.username };
       localStorage.setItem('currentUser', JSON.stringify(userData));
-      setToken(res.data.token); 
+      setToken(res.data.token);
       setCurrentUser(userData);
       return { success: true };
     } catch (error) {
-      console.error("Login error:", error.response ? error.response.data : error.message);
       return { success: false, message: error.response?.data?.msg || 'Login failed' };
     }
   };
 
   const register = async (username, password) => {
-    // Omitted for brevity
     try {
       await axios.post(`${API_URL}/auth/register`, { username, password });
       return { success: true };
     } catch (error) {
-      console.error("Registration error:", error.response ? error.response.data : error.message);
       return { success: false, message: error.response?.data?.msg || 'Registration failed' };
     }
   };
 
   const logout = () => {
-    // Omitted for brevity
     localStorage.removeItem('token');
     localStorage.removeItem('currentUser');
-    setToken(null); 
+    setToken(null);
     setCurrentUser(null);
   };
+  // --- End of Auth Functions ---
 
   const contextValue = {
     token,
     currentUser,
     isAuthenticated: !!token,
-    loading: internalLoading, // Consumers use this 'loading'
+    loading: internalLoading, // This 'loading' is what consumers will get
     login,
     register,
     logout,
   };
 
-  // If AuthProvider itself is loading, show a message and don't render children yet.
-  // This ensures that when children (like BudgetsProvider) are rendered,
-  // the AuthContext they consume will have `loading: false`.
+  // AuthProvider renders its children ONLY when its internalLoading is false.
+  // When it does render children, the contextValue will have `loading: false`.
   if (internalLoading) {
-    // console.log("AuthProvider: Rendering internal loading state.");
+    console.log("AuthProvider: Is loading (internalLoading is true). Showing init message.");
     return <Container className="my-4"><p>Initializing Authentication...</p></Container>;
   }
 
-  // console.log("AuthProvider: Rendering Provider with children. Context loading state:", contextValue.loading);
+  // console.log("AuthProvider: internalLoading is false. Rendering Provider with children. Context loading will be:", contextValue.loading);
   return (
     <AuthContext.Provider value={contextValue}>
       {children}
