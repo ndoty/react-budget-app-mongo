@@ -1,40 +1,36 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Container } from "react-bootstrap"; // 
+import { Container } from "react-bootstrap"; // Keep this
 import { v4 as uuidV4 } from "uuid";
 import useMongo, { postSingleItemToAPI, deleteItemFromAPI, postMonthlyCapToAPI, fetchDataFromAPI } from "../hooks/useMongo";
 import { useAuth } from "./AuthContext";
 
 const BudgetsContext = createContext();
 
-export const UNCATEGORIZED_BUDGET_ID = "Uncategorized"; // This is a client-side constant
+export const UNCATEGORIZED_BUDGET_ID = "Uncategorized";
 
 export function useBudgets() {
   return useContext(BudgetsContext);
 }
 
 export const BudgetsProvider = ({ children }) => {
-  const { isAuthenticated, loading: authLoading, currentUser } = useAuth(); 
-  
+  const { isAuthenticated, loading: authLoading } = useAuth(); // authLoading comes from AuthContext's internalLoading
+
   const [budgets, setBudgets] = useMongo("budgets", []);
   const [expenses, setExpenses] = useMongo("expenses", []);
-  const [monthlyCap, setMonthlyCap] = useMongo("monthlyCap", []); 
+  const [monthlyCap, setMonthlyCap] = useMongo("monthlyCap", []);
 
   useEffect(() => {
-    if (!isAuthenticated && !authLoading) {
+    if (!authLoading && !isAuthenticated) {
       setBudgets([]);
       setExpenses([]);
       setMonthlyCap([]);
     }
   }, [isAuthenticated, authLoading, setBudgets, setExpenses, setMonthlyCap]);
 
-
-  function getBudgetExpenses(budgetId) {
-    return expenses.filter((expense) => expense.budgetId === budgetId);
-  }
-
+  // ... (all your budget/expense functions: addExpense, addBudget, etc. Make sure they check isAuthenticated if necessary)
   async function addExpense({ description, amount, budgetId }) {
-    if (!isAuthenticated) return console.error("Not authenticated to add expense");
-    const newExpense = { id: uuidV4(), description, amount, budgetId }; 
+    if (!isAuthenticated) { console.error("User not authenticated"); return; }
+    const newExpense = { id: uuidV4(), description, amount, budgetId };
     const savedExpense = await postSingleItemToAPI("expenses", newExpense);
     if (savedExpense) {
       setExpenses((prevExpenses) => [...prevExpenses, savedExpense]);
@@ -42,30 +38,30 @@ export const BudgetsProvider = ({ children }) => {
   }
 
   async function addBudget({ name, max }) {
-    if (!isAuthenticated) return console.error("Not authenticated to add budget");
+    if (!isAuthenticated) { console.error("User not authenticated"); return; }
     if (budgets.find((budget) => budget.name === name)) {
-      alert("Budget with this name already exists."); 
+      alert("Budget with this name already exists.");
       return;
     }
-    const newBudget = { id: uuidV4(), name, max }; 
+    const newBudget = { id: uuidV4(), name, max };
     const savedBudget = await postSingleItemToAPI("budgets", newBudget);
     if (savedBudget) {
       setBudgets((prevBudgets) => [...prevBudgets, savedBudget]);
     } else { console.error("Failed to save budget to server"); }
   }
 
-  async function deleteBudgetClient({ id }) { 
-    if (!isAuthenticated) return console.error("Not authenticated to delete budget");
+  async function deleteBudgetClient({ id }) {
+    if (!isAuthenticated) { console.error("User not authenticated"); return; }
     const result = await deleteItemFromAPI("budgets", id);
     if (result) {
       setBudgets((prevBudgets) => prevBudgets.filter((budget) => budget.id !== id));
-      const updatedExpenses = await fetchDataFromAPI("expenses"); 
+      const updatedExpenses = await fetchDataFromAPI("expenses");
       if (updatedExpenses) setExpenses(updatedExpenses);
     } else { console.error("Failed to delete budget from server"); }
   }
 
-  async function deleteExpenseClient({ id }) { 
-    if (!isAuthenticated) return console.error("Not authenticated to delete expense");
+  async function deleteExpenseClient({ id }) {
+    if (!isAuthenticated) { console.error("User not authenticated"); return; }
     const result = await deleteItemFromAPI("expenses", id);
     if (result) {
       setExpenses((prevExpenses) => prevExpenses.filter((expense) => expense.id !== id));
@@ -73,22 +69,23 @@ export const BudgetsProvider = ({ children }) => {
   }
 
   async function setMonthlyCapTotal(capAmountStr) {
-    if (!isAuthenticated) return console.error("Not authenticated to set monthly cap");
+    if (!isAuthenticated) { console.error("User not authenticated"); return; }
     const amount = parseFloat(capAmountStr);
-    let capDataPayload = {};
+    let capDataPayload = {}; // Send empty object to clear/delete cap
     if (!isNaN(amount) && amount > 0) {
       capDataPayload = { cap: amount };
     }
-    const result = await postMonthlyCapToAPI(capDataPayload); 
-    if (result) { 
+    const result = await postMonthlyCapToAPI(capDataPayload);
+    if (result) {
       setMonthlyCap(result);
     } else {
       console.error("Failed to set monthly cap on server");
     }
   }
-  
+
+  // This is the crucial check. If authLoading is true, BudgetsProvider waits.
   if (authLoading) {
-    return <Container className="my-4"><p>Loading budget data...</p></Container>;
+    return <Container className="my-4"><p>Loading budget data (waiting for auth)...</p></Container>;
   }
 
   return (
@@ -100,8 +97,8 @@ export const BudgetsProvider = ({ children }) => {
         getBudgetExpenses,
         addExpense,
         addBudget,
-        deleteBudget: deleteBudgetClient, 
-        deleteExpense: deleteExpenseClient, 
+        deleteBudget: deleteBudgetClient,
+        deleteExpense: deleteExpenseClient,
         setMonthlyCapTotal,
       }}
     >
