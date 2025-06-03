@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from "react"; // useState is needed for LoginPage/RegisterPage
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
 import { Button, Stack, Container, Nav, Navbar, Form } from "react-bootstrap";
 
@@ -20,7 +20,7 @@ function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const { login, loading: authContextLoading } = useAuth();
+  const { login, loading: authContextLoading } = useAuth(); 
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -88,8 +88,8 @@ function BudgetAppContent() {
   const [viewExpensesModalBudgetId, setViewExpensesModalBudgetId] = useState();
   const [addExpenseModalBudgetId, setAddExpenseModalBudgetId] = useState();
   const [showFixedMonthlyTotalModal, setShowFixedMonthlyTotalModal] = useState(false);
-
-  const { budgets, getBudgetExpenses } = useBudgets(); // This hook call is now safe
+  
+  const { budgets, getBudgetExpenses } = useBudgets();
   const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
 
@@ -100,14 +100,12 @@ function BudgetAppContent() {
 
   const handleLogout = () => { logout(); navigate("/login"); };
 
-  // This content will only render if BudgetsProvider determines auth is ready
-  // AND ProtectedRoute allows access (isAuthenticated is true)
   return (
     <>
       <Navbar bg="light" expand="lg" className="mb-4">
         <Container>
           <Navbar.Brand as={Link} to="/">Budget App</Navbar.Brand>
-          {currentUser && <Navbar.Text className="ms-2">Signed in as: {currentUser.username}</Navbar.Text>}
+          {currentUser && <Navbar.Text className="ms-2">Signed in as: <strong>{currentUser.username}</strong></Navbar.Text>}
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="ms-auto">
@@ -124,8 +122,9 @@ function BudgetAppContent() {
           <Button variant="outline-primary" onClick={() => openAddExpenseModal()}>Add Expense</Button>
         </Stack>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
-          { Array.isArray(budgets) && budgets.map((budget) => { // Check if budgets is an array
+          { Array.isArray(budgets) && budgets.map((budget) => {
             const amount = getBudgetExpenses(budget.id).reduce((total, expense) => total + expense.amount, 0);
+            // Pass the client-generated budget.id for deletion/viewing operations
             return (<BudgetCard key={budget.id} budgetId={budget.id} name={budget.name} amount={amount} max={budget.max} onAddExpenseClick={() => openAddExpenseModal(budget.id)} onViewExpensesClick={() => setViewExpensesModalBudgetId(budget.id)} />);
           })}
           <UncategorizedBudgetCard onAddExpenseClick={() => openAddExpenseModal(UNCATEGORIZED_BUDGET_ID)} onViewExpensesClick={() => setViewExpensesModalBudgetId(UNCATEGORIZED_BUDGET_ID)} />
@@ -163,19 +162,8 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <BudgetAppContent />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={
-                <ProtectedRoute> {/* Ensures redirect to home if authenticated, else to login */}
-                    <Navigate to="/" replace />
-                </ProtectedRoute>
-            } />
+            <Route path="/" element={ <ProtectedRoute> <BudgetAppContent /> </ProtectedRoute> } />
+            <Route path="*" element={ <Navigate to={useAuth().isAuthenticated ? "/" : "/login"} replace />} />
           </Routes>
         </BudgetsProvider>
       </AuthProvider>
