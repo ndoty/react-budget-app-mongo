@@ -12,8 +12,6 @@ export const fetchDataFromAPI = async (key) => {
     console.error(`Error fetching ${key}:`, error.response ? error.response.data : error.message);
     if (error.response && error.response.status === 401) {
       console.error("fetchDataFromAPI: Unauthorized fetch.");
-      // Consider calling logout() from AuthContext if a global logout on 401 is desired.
-      // Example: auth.logout(); // but auth would need to be passed or context used here.
     }
     return null;
   }
@@ -54,23 +52,26 @@ export default function useMongo(key, initialDefault = []) {
   const { isAuthenticated, loading: authLoading } = useAuth();
 
   useEffect(() => {
+    // console.log(`useMongo (${key}) - Effect triggered. authLoading: ${authLoading}, isAuthenticated: ${isAuthenticated}`);
     const loadData = async () => {
       if (isAuthenticated) {
+        // console.log(`useMongo (${key}): Auth ready and authenticated, fetching data.`);
         const data = await fetchDataFromAPI(key);
-        setValue(Array.isArray(data) ? data : initialDefault); // Ensure data is array or fallback
+        setValue(Array.isArray(data) ? data : initialDefault); 
       } else {
-        setValue(initialDefault); // Clear data if not authenticated
+        // console.log(`useMongo (${key}): Not authenticated. Setting to initialDefault.`);
+        setValue(initialDefault);
       }
     };
 
     if (!authLoading) {
+      // console.log(`useMongo (${key}): Auth loading complete. Proceeding with loadData logic.`);
       loadData();
     } else {
-      setValue(initialDefault); // Also clear/reset if auth is still loading
+      // console.log(`useMongo (${key}): Auth is still loading. Setting to initialDefault to avoid stale data.`);
+       setValue(initialDefault); // Ensure data is cleared/reset if auth is loading
     }
-    // initialDefault is an array, so it's stable unless its reference changes.
-    // If initialDefault could change reference frequently and cause loops, consider a more specific dependency.
-  }, [key, isAuthenticated, authLoading]); // Removed initialDefault from deps for now
+  }, [key, isAuthenticated, authLoading]); // initialDefault removed as it might cause loops if it's a new array/object ref each render
 
   return [value, setValue];
 }
