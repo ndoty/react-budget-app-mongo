@@ -80,9 +80,14 @@ function RegisterPage() {
 }
 
 // --- Protected Route Component ---
+// Inside App.js or its own file
 function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
-  if (loading) return <Container className="my-4"><p>Authenticating...</p></Container>;
+  const { isAuthenticated, loading } = useAuth(); // `loading` here is from AuthContext
+
+  if (loading) {
+    return <Container className="my-4"><p>Authenticating...</p></Container>; // Or a global spinner
+  }
+
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
