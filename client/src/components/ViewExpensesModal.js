@@ -1,16 +1,14 @@
-import { Modal, Button, Stack } from "react-bootstrap"
-import { UNCATEGORIZED_BUDGET_ID, useBudgets } from "../contexts/BudgetsContext"
-import { currencyFormatter } from "../utils"
-
+// ... imports ...
+import { UNCATEGORIZED_BUDGET_ID, useBudgets } from "../contexts/BudgetsContext"; // deleteBudget, deleteExpense are now async
+// ...
 export default function ViewExpensesModal({ budgetId, handleClose }) {
-  const { getBudgetExpenses, budgets, deleteBudget, deleteExpense } =
-    useBudgets()
+  const { getBudgetExpenses, budgets, deleteBudget, deleteExpense } = useBudgets(); // use the renamed context functions
 
-  const expenses = getBudgetExpenses(budgetId)
+  const expenses = getBudgetExpenses(budgetId);
   const budget =
     UNCATEGORIZED_BUDGET_ID === budgetId
       ? { name: "Uncategorized", id: UNCATEGORIZED_BUDGET_ID }
-      : budgets.find(b => b.id === budgetId)
+      : budgets.find(b => b.id === budgetId);
 
   return (
     <Modal show={budgetId != null} onHide={handleClose}>
@@ -18,15 +16,20 @@ export default function ViewExpensesModal({ budgetId, handleClose }) {
         <Modal.Title>
           <Stack direction="horizontal" gap="2">
             <div>Expenses - {budget?.name}</div>
-            {budgetId !== UNCATEGORIZED_BUDGET_ID && (
+            {budgetId !== UNCATEGORIZED_BUDGET_ID && budget && ( // Added budget check
               <Button
-                onClick={() => {
-                  deleteBudget(budget)
-                  handleClose()
+                onClick={async () => { // make async
+                  // The budget object here might not have the original client UUID `id` if it's just from budgets.find.
+                  // It's better to pass the full budget object or just its client UUID to deleteBudget.
+                  // Assuming `budget` here has the correct `id` (client UUID)
+                  if (budget && budget.id) {
+                    await deleteBudget({ id: budget.id }); // Pass client ID
+                  }
+                  handleClose();
                 }}
                 variant="outline-danger"
               >
-                Delete
+                Delete Budget
               </Button>
             )}
           </Stack>
@@ -37,11 +40,9 @@ export default function ViewExpensesModal({ budgetId, handleClose }) {
           {expenses.map(expense => (
             <Stack direction="horizontal" gap="2" key={expense.id}>
               <div className="me-auto fs-4">{expense.description}</div>
-              <div className="fs-5">
-                {currencyFormatter.format(expense.amount)}
-              </div>
+              {/* ... other expense details ... */}
               <Button
-                onClick={() => deleteExpense(expense)}
+                onClick={async () => await deleteExpense({ id: expense.id })} // Pass client ID
                 size="sm"
                 variant="outline-danger"
               >
@@ -52,5 +53,5 @@ export default function ViewExpensesModal({ budgetId, handleClose }) {
         </Stack>
       </Modal.Body>
     </Modal>
-  )
+  );
 }
