@@ -1,3 +1,6 @@
+// client/src/hooks/useMongo.js
+// ... (imports and API_URL_BASE) ...
+// fetchDataFromAPI, postSingleItemToAPI, deleteItemFromAPI, postMonthlyCapToAPI remain the same
 import axios from "axios"; // Using lowercase axios for consistency
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext"; // To re-fetch on auth change
@@ -52,22 +55,28 @@ export const postMonthlyCapToAPI = async (capData) => {
 
 export default function useMongo(key, initialDefault = []) {
   const [value, setValue] = useState(initialDefault);
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth(); // Get auth state and its loading status
 
   useEffect(() => {
     const loadData = async () => {
-      if (isAuthenticated) {
+      if (isAuthenticated) { // Only fetch if authenticated
+        // console.log(`useMongo (${key}): Auth ready and authenticated, fetching data.`);
         const data = await fetchDataFromAPI(key);
         setValue(data || initialDefault);
       } else {
+        // console.log(`useMongo (${key}): Auth ready but not authenticated, or logging out. Clearing data.`);
         setValue(initialDefault); // Clear data if not authenticated
       }
     };
 
-    if (!authLoading) { // Only fetch if auth state is resolved
-        loadData();
+    if (!authLoading) { // Only proceed if auth state determination is complete
+      loadData();
+    } else {
+      // console.log(`useMongo (${key}): Auth still loading, deferring fetch.`);
+      // Optionally clear local state if you want immediate feedback on authLoading start
+      // setValue(initialDefault);
     }
-  }, [key, isAuthenticated, authLoading, initialDefault]); // Re-fetch if key or auth state changes
+  }, [key, isAuthenticated, authLoading, initialDefault]);
 
   return [value, setValue];
 }
