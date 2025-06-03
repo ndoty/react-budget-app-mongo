@@ -1,20 +1,19 @@
 import axios from "axios";
 import { useState, useEffect } from "react";
-import { useAuth } from "../contexts/AuthContext"; // Ensure correct path
+import { useAuth } from "../contexts/AuthContext";
 
 const API_URL_BASE = process.env.REACT_APP_API_URL || "//localhost:5000/api";
 
 export const fetchDataFromAPI = async (key) => {
   try {
-    // console.log(`fetchDataFromAPI: Fetching ${key}`);
     const response = await axios.get(`${API_URL_BASE}/${key}`);
-    // console.log(`fetchDataFromAPI: Received for ${key}`, response.data);
     return response.data;
   } catch (error) {
     console.error(`Error fetching ${key}:`, error.response ? error.response.data : error.message);
     if (error.response && error.response.status === 401) {
       console.error("fetchDataFromAPI: Unauthorized fetch.");
-      // Potentially trigger logout via AuthContext or an event
+      // Consider calling logout() from AuthContext if a global logout on 401 is desired.
+      // Example: auth.logout(); // but auth would need to be passed or context used here.
     }
     return null;
   }
@@ -55,27 +54,23 @@ export default function useMongo(key, initialDefault = []) {
   const { isAuthenticated, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    // console.log(`useMongo (${key}) - Effect triggered. authLoading: ${authLoading}, isAuthenticated: ${isAuthenticated}`);
     const loadData = async () => {
       if (isAuthenticated) {
-        // console.log(`useMongo (${key}): Auth ready and authenticated, fetching data.`);
         const data = await fetchDataFromAPI(key);
-        setValue(data || initialDefault);
+        setValue(Array.isArray(data) ? data : initialDefault); // Ensure data is array or fallback
       } else {
-        // console.log(`useMongo (${key}): Not authenticated or auth still loading. Setting to initialDefault.`);
-        setValue(initialDefault);
+        setValue(initialDefault); // Clear data if not authenticated
       }
     };
 
-    if (!authLoading) { // Only fetch if auth state determination is complete
-      // console.log(`useMongo (${key}): Auth loading complete. Proceeding with loadData logic.`);
+    if (!authLoading) {
       loadData();
     } else {
-      // console.log(`useMongo (${key}): Auth is still loading. Deferring fetch.`);
-      // Ensure data is reset if auth is loading, to avoid showing stale data from a previous session briefly
-       setValue(initialDefault);
+      setValue(initialDefault); // Also clear/reset if auth is still loading
     }
-  }, [key, isAuthenticated, authLoading]); // Removed initialDefault from deps to avoid potential loops if it's a new array/object each render
+    // initialDefault is an array, so it's stable unless its reference changes.
+    // If initialDefault could change reference frequently and cause loops, consider a more specific dependency.
+  }, [key, isAuthenticated, authLoading]); // Removed initialDefault from deps for now
 
   return [value, setValue];
 }
