@@ -1,3 +1,4 @@
+// client/src/contexts/BudgetsContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { v4 as uuidV4 } from "uuid";
 import useMongo, { postSingleItemToAPI, deleteItemFromAPI, postMonthlyCapToAPI, fetchDataFromAPI } from "../hooks/useMongo";
@@ -5,22 +6,25 @@ import { useAuth } from "./AuthContext";
 
 const BudgetsContext = createContext();
 
-export const UNCATEGORIZED_BUDGET_ID = "Uncategorized"; // This is a client-side constant
+export const UNCATEGORIZED_BUDGET_ID = "Uncategorized";
 
 export function useBudgets() {
   return useContext(BudgetsContext);
 }
 
 export const BudgetsProvider = ({ children }) => {
-  const { isAuthenticated, loading: authLoading } = useAuth();
-  
+  const { isAuthenticated, loading: authLoading, currentUser } = useAuth(); // Destructure currentUser as well if needed later
+
+  // Pass authLoading to useMongo if it needs to wait, or handle loading state here.
+  // For simplicity, useMongo itself also now uses useAuth to get isAuthenticated and authLoading.
   const [budgets, setBudgets] = useMongo("budgets", []);
   const [expenses, setExpenses] = useMongo("expenses", []);
-  const [monthlyCap, setMonthlyCap] = useMongo("monthlyCap", []); // Backend sends array with one cap object or empty
+  const [monthlyCap, setMonthlyCap] = useMongo("monthlyCap", []);
 
-  // This effect ensures data is cleared if user logs out
+  // This effect is fine for clearing data on logout.
   useEffect(() => {
     if (!isAuthenticated && !authLoading) {
+      // console.log("BudgetsContext: User logged out or auth not ready, clearing data.");
       setBudgets([]);
       setExpenses([]);
       setMonthlyCap([]);
@@ -28,12 +32,13 @@ export const BudgetsProvider = ({ children }) => {
   }, [isAuthenticated, authLoading, setBudgets, setExpenses, setMonthlyCap]);
 
 
-  function getBudgetExpenses(budgetId) {
-    return expenses.filter((expense) => expense.budgetId === budgetId);
-  }
+  // ... (rest of your functions: getBudgetExpenses, addExpense, addBudget, etc.)
+  // Ensure these functions check for isAuthenticated if they perform actions that require it,
+  // or rely on ProtectedRoute to prevent access.
 
   async function addExpense({ description, amount, budgetId }) {
-    const newExpense = { id: uuidV4(), description, amount, budgetId }; // client-generated id
+    if (!isAuthenticated) return console.error("Not authenticated to add expense");
+    const newExpense = { id: uuidV4(), description, amount, budgetId };
     const savedExpense = await postSingleItemToAPI("expenses", newExpense);
     if (savedExpense) {
       setExpenses((prevExpenses) => [...prevExpenses, savedExpense]);
@@ -41,28 +46,30 @@ export const BudgetsProvider = ({ children }) => {
   }
 
   async function addBudget({ name, max }) {
+    if (!isAuthenticated) return console.error("Not authenticated to add budget");
     if (budgets.find((budget) => budget.name === name)) {
-      alert("Budget with this name already exists."); // Simple alert, consider better UX
+      alert("Budget with this name already exists.");
       return;
     }
-    const newBudget = { id: uuidV4(), name, max }; // client-generated id
+    const newBudget = { id: uuidV4(), name, max };
     const savedBudget = await postSingleItemToAPI("budgets", newBudget);
     if (savedBudget) {
       setBudgets((prevBudgets) => [...prevBudgets, savedBudget]);
     } else { console.error("Failed to save budget to server"); }
   }
 
-  async function deleteBudgetClient({ id }) { // id is the client-side UUID
+  async function deleteBudgetClient({ id }) {
+    if (!isAuthenticated) return console.error("Not authenticated to delete budget");
     const result = await deleteItemFromAPI("budgets", id);
     if (result) {
       setBudgets((prevBudgets) => prevBudgets.filter((budget) => budget.id !== id));
-      // Refetch expenses as backend reassigns them to "Uncategorized"
-      const updatedExpenses = await fetchDataFromAPI("expenses");
+      const updatedExpenses = await fetchDataFromAPI("expenses"); // Refetch
       if (updatedExpenses) setExpenses(updatedExpenses);
     } else { console.error("Failed to delete budget from server"); }
   }
 
-  async function deleteExpenseClient({ id }) { // id is the client-side UUID
+  async function deleteExpenseClient({ id }) {
+    if (!isAuthenticated) return console.error("Not authenticated to delete expense");
     const result = await deleteItemFromAPI("expenses", id);
     if (result) {
       setExpenses((prevExpenses) => prevExpenses.filter((expense) => expense.id !== id));
@@ -70,20 +77,23 @@ export const BudgetsProvider = ({ children }) => {
   }
 
   async function setMonthlyCapTotal(capAmountStr) {
+    if (!isAuthenticated) return console.error("Not authenticated to set monthly cap");
     const amount = parseFloat(capAmountStr);
     let capDataPayload = {};
-
     if (!isNaN(amount) && amount > 0) {
       capDataPayload = { cap: amount };
     }
-    // If amount is 0, NaN, or not provided, {} will be sent, backend will delete current cap.
-
-    const result = await postMonthlyCapToAPI(capDataPayload); // API expects {cap: number} or {}
-    if (result) { // Backend returns array: [cap] or []
+    const result = await postMonthlyCapToAPI(capDataPayload);
+    if (result) {
       setMonthlyCap(result);
-    } else {
-      console.error("Failed to set monthly cap on server");
-    }
+    } else { console.error("Failed to set monthly cap on server"); }
+  }
+
+  // If auth is still loading, you might want to render a loading state from BudgetsProvider too,
+  // or ensure its children (like BudgetAppContent) handle this.
+  if (authLoading) {
+    // Or return null, or a specific loading component for this context
+    return <Container className="my-4"><p>Loading budget data...</p></Container>;
   }
 
   return (
@@ -95,8 +105,8 @@ export const BudgetsProvider = ({ children }) => {
         getBudgetExpenses,
         addExpense,
         addBudget,
-        deleteBudget: deleteBudgetClient, // Renamed to avoid conflict if any
-        deleteExpense: deleteExpenseClient, // Renamed
+        deleteBudget: deleteBudgetClient,
+        deleteExpense: deleteExpenseClient,
         setMonthlyCapTotal,
       }}
     >
