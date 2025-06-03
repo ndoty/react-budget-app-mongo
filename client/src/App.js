@@ -79,18 +79,6 @@ function RegisterPage() {
   );
 }
 
-// --- Protected Route Component ---
-// Inside App.js or its own file
-function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth(); // `loading` here is from AuthContext
-
-  if (loading) {
-    return <Container className="my-4"><p>Authenticating...</p></Container>; // Or a global spinner
-  }
-
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
-}
-
 // --- Main Budget Application Content ---
 function BudgetAppContent() {
   const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
@@ -147,24 +135,45 @@ function BudgetAppContent() {
   );
 }
 
-// --- Main App Component ---
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth(); // `loading` is from AuthContext
+
+  // console.log("ProtectedRoute - loading:", loading, "isAuthenticated:", isAuthenticated);
+
+  if (loading) {
+    return <Container className="my-4"><p>Authenticating...</p></Container>; // Or a global spinner
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
 function App() {
   return (
     <Router>
-      <AuthProvider> {/* AuthProvider is the outermost context provider */}
-        <BudgetsProvider> {/* BudgetsProvider is inside AuthProvider */}
+      <AuthProvider> {/* Step 1: AuthProvider initializes its internalLoading */}
+        {/* Children of AuthProvider are only rendered when its internalLoading is false */}
+        <BudgetsProvider> {/* Step 2: BudgetsProvider uses authLoading from context */}
+                           {/* It will show its own loading if authLoading is true */}
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route
               path="/"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute> {/* Step 3: ProtectedRoute also uses authLoading */}
                   <BudgetAppContent />
                 </ProtectedRoute>
               }
             />
-            <Route path="*" element={<Navigate to="/login" replace />} /> {/* Default to login if no auth */}
+            {/* Fallback route for logged-in users if they hit a non-existent path */}
+            <Route path="*" element={
+              <ProtectedRoute>
+                <Navigate to="/" replace />
+              </ProtectedRoute>
+            } />
           </Routes>
         </BudgetsProvider>
       </AuthProvider>
