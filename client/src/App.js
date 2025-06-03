@@ -1,5 +1,4 @@
-// client/src/App.js
-import React, { useState } from "react"; // useState needed for LoginPage/RegisterPage
+import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
 import { Button, Stack, Container, Nav, Navbar, Form } from "react-bootstrap";
 
@@ -21,7 +20,7 @@ function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const { login, loading: authContextLoading } = useAuth(); // Can get loading from auth context if needed for button disable
+  const { login, loading: authContextLoading } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -63,7 +62,7 @@ function RegisterPage() {
     if (password !== confirmPassword) { setError("Passwords do not match"); return; }
     const result = await register(username, password);
     if (result.success) {
-      alert("Registration successful! Please login."); // Give feedback
+      alert("Registration successful! Please login.");
       navigate("/login");
     } else { setError(result.message || "Failed to register"); }
   };
@@ -81,6 +80,7 @@ function RegisterPage() {
     </Container>
   );
 }
+
 // --- Main application component for budgets ---
 function BudgetAppContent() {
   const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
@@ -88,21 +88,20 @@ function BudgetAppContent() {
   const [viewExpensesModalBudgetId, setViewExpensesModalBudgetId] = useState();
   const [addExpenseModalBudgetId, setAddExpenseModalBudgetId] = useState();
   const [showFixedMonthlyTotalModal, setShowFixedMonthlyTotalModal] = useState(false);
-  
-  // useBudgets will throw an error if BudgetsContext is not ready,
-  // but BudgetsProvider handles the authLoading state before rendering this.
-  const { budgets, getBudgetExpenses } = useBudgets();
+
+  const { budgets, getBudgetExpenses } = useBudgets(); // This hook call is now safe
   const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
-
 
   function openAddExpenseModal(budgetId) {
     setShowAddExpenseModal(true);
     setAddExpenseModalBudgetId(budgetId);
   }
 
-  const handleLogout = () => { logout(); navigate("/login"); }
+  const handleLogout = () => { logout(); navigate("/login"); };
 
+  // This content will only render if BudgetsProvider determines auth is ready
+  // AND ProtectedRoute allows access (isAuthenticated is true)
   return (
     <>
       <Navbar bg="light" expand="lg" className="mb-4">
@@ -125,8 +124,7 @@ function BudgetAppContent() {
           <Button variant="outline-primary" onClick={() => openAddExpenseModal()}>Add Expense</Button>
         </Stack>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
-          {budgets.map((budget) => {
-            // Ensure budget.id is the client-side UUID
+          { Array.isArray(budgets) && budgets.map((budget) => { // Check if budgets is an array
             const amount = getBudgetExpenses(budget.id).reduce((total, expense) => total + expense.amount, 0);
             return (<BudgetCard key={budget.id} budgetId={budget.id} name={budget.name} amount={amount} max={budget.max} onAddExpenseClick={() => openAddExpenseModal(budget.id)} onViewExpensesClick={() => setViewExpensesModalBudgetId(budget.id)} />);
           })}
@@ -135,3 +133,53 @@ function BudgetAppContent() {
         </div>
       </Container>
       <AddBudgetModal show={showAddBudgetModal} handleClose={() => setShowAddBudgetModal(false)} />
+      <AddExpenseModal show={showAddExpenseModal} defaultBudgetId={addExpenseModalBudgetId} handleClose={() => setShowAddExpenseModal(false)} />
+      <ViewExpensesModal budgetId={viewExpensesModalBudgetId} handleClose={() => setViewExpensesModalBudgetId()} />
+      <AddFixedMonthlyTotalModal show={showFixedMonthlyTotalModal} handleClose={() => setShowFixedMonthlyTotalModal(false)} />
+    </>
+  );
+}
+
+// --- Protected Route Component ---
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return <Container className="my-4" style={{textAlign: 'center'}}><p>Authenticating...</p></Container>;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+// --- Main App Component ---
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <BudgetsProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <BudgetAppContent />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={
+                <ProtectedRoute> {/* Ensures redirect to home if authenticated, else to login */}
+                    <Navigate to="/" replace />
+                </ProtectedRoute>
+            } />
+          </Routes>
+        </BudgetsProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
+export default App;
