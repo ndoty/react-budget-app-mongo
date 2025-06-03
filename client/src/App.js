@@ -146,13 +146,20 @@ function BudgetAppContent() {
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <BudgetsProvider>
+      <AuthProvider> {/* AuthProvider is the outermost context provider */}
+        <BudgetsProvider> {/* BudgetsProvider is inside AuthProvider */}
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route path="/" element={<ProtectedRoute><BudgetAppContent /></ProtectedRoute>} />
-            <Route path="*" element={<Navigate to="/" replace />} /> {/* Redirect unknown paths */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <BudgetAppContent />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/login" replace />} /> {/* Default to login if no auth */}
           </Routes>
         </BudgetsProvider>
       </AuthProvider>
