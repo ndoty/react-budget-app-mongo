@@ -1,21 +1,20 @@
-// client/src/hooks/useMongo.js
-// ... (imports and API_URL_BASE) ...
-// fetchDataFromAPI, postSingleItemToAPI, deleteItemFromAPI, postMonthlyCapToAPI remain the same
-import axios from "axios"; // Using lowercase axios for consistency
+import axios from "axios";
 import { useState, useEffect } from "react";
-import { useAuth } from "../contexts/AuthContext"; // To re-fetch on auth change
+import { useAuth } from "../contexts/AuthContext"; // Ensure correct path
 
 const API_URL_BASE = process.env.REACT_APP_API_URL || "//localhost:5000/api";
 
 export const fetchDataFromAPI = async (key) => {
   try {
+    // console.log(`fetchDataFromAPI: Fetching ${key}`);
     const response = await axios.get(`${API_URL_BASE}/${key}`);
+    // console.log(`fetchDataFromAPI: Received for ${key}`, response.data);
     return response.data;
   } catch (error) {
-    console.error(`Error fetching ${key}:`, error.response ? error.response.data : error);
+    console.error(`Error fetching ${key}:`, error.response ? error.response.data : error.message);
     if (error.response && error.response.status === 401) {
-      console.error("Unauthorized fetch. Token might be invalid or missing.");
-      // AuthContext should ideally handle global logout on 401
+      console.error("fetchDataFromAPI: Unauthorized fetch.");
+      // Potentially trigger logout via AuthContext or an event
     }
     return null;
   }
@@ -26,57 +25,57 @@ export const postSingleItemToAPI = async (key, item) => {
     const response = await axios.post(`${API_URL_BASE}/${key}`, item);
     return response.data;
   } catch (error) {
-    console.error(`Error posting single ${key}:`, error.response ? error.response.data : error);
+    console.error(`Error posting single ${key}:`, error.response ? error.response.data : error.message);
     return null;
   }
 };
 
 export const deleteItemFromAPI = async (key, itemId) => {
   try {
-    const response = await axios.delete(`${API_URL_BASE}/${key}/${itemId}`); // Using client-generated ID
+    const response = await axios.delete(`${API_URL_BASE}/${key}/${itemId}`);
     return response.data;
   } catch (error) {
-    console.error(`Error deleting ${key} ID ${itemId}:`, error.response ? error.response.data : error);
+    console.error(`Error deleting ${key} ID ${itemId}:`, error.response ? error.response.data : error.message);
     return null;
   }
 };
 
-// Special function for posting monthly cap (which has a slightly different structure on backend)
 export const postMonthlyCapToAPI = async (capData) => {
   try {
-    // Backend expects { cap: number } or {} to clear.
     const response = await axios.post(`${API_URL_BASE}/monthlyCap`, capData);
     return response.data;
   } catch (error) {
-    console.error(`Error posting monthlyCap:`, error.response ? error.response.data : error);
+    console.error(`Error posting monthlyCap:`, error.response ? error.response.data : error.message);
     return null;
   }
 }
 
 export default function useMongo(key, initialDefault = []) {
   const [value, setValue] = useState(initialDefault);
-  const { isAuthenticated, loading: authLoading } = useAuth(); // Get auth state and its loading status
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   useEffect(() => {
+    // console.log(`useMongo (${key}) - Effect triggered. authLoading: ${authLoading}, isAuthenticated: ${isAuthenticated}`);
     const loadData = async () => {
-      if (isAuthenticated) { // Only fetch if authenticated
+      if (isAuthenticated) {
         // console.log(`useMongo (${key}): Auth ready and authenticated, fetching data.`);
         const data = await fetchDataFromAPI(key);
         setValue(data || initialDefault);
       } else {
-        // console.log(`useMongo (${key}): Auth ready but not authenticated, or logging out. Clearing data.`);
-        setValue(initialDefault); // Clear data if not authenticated
+        // console.log(`useMongo (${key}): Not authenticated or auth still loading. Setting to initialDefault.`);
+        setValue(initialDefault);
       }
     };
 
-    if (!authLoading) { // Only proceed if auth state determination is complete
+    if (!authLoading) { // Only fetch if auth state determination is complete
+      // console.log(`useMongo (${key}): Auth loading complete. Proceeding with loadData logic.`);
       loadData();
     } else {
-      // console.log(`useMongo (${key}): Auth still loading, deferring fetch.`);
-      // Optionally clear local state if you want immediate feedback on authLoading start
-      // setValue(initialDefault);
+      // console.log(`useMongo (${key}): Auth is still loading. Deferring fetch.`);
+      // Ensure data is reset if auth is loading, to avoid showing stale data from a previous session briefly
+       setValue(initialDefault);
     }
-  }, [key, isAuthenticated, authLoading, initialDefault]);
+  }, [key, isAuthenticated, authLoading]); // Removed initialDefault from deps to avoid potential loops if it's a new array/object each render
 
   return [value, setValue];
 }
