@@ -11,6 +11,7 @@ export const UNCATEGORIZED_BUDGET_ID = "Uncategorized";
 export function useBudgets() {
   const context = useContext(BudgetsContext);
   if (context === undefined) {
+    // This error would indicate BudgetsProvider isn't wrapping the component using useBudgets
     throw new Error("useBudgets must be used within a BudgetsProvider");
   }
   return context;
@@ -19,12 +20,15 @@ export function useBudgets() {
 export const BudgetsProvider = ({ children }) => {
   const { isAuthenticated, loading: authLoading } = useAuth();
 
+  // console.log("BudgetsProvider - Render - authLoading:", authLoading, "isAuthenticated:", isAuthenticated);
+
   const [budgets, setBudgets] = useMongo("budgets", []);
   const [expenses, setExpenses] = useMongo("expenses", []);
   const [monthlyCap, setMonthlyCap] = useMongo("monthlyCap", []);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
+      // console.log("BudgetsContext: Clearing data as user is not authenticated or auth state changed to not authenticated.");
       setBudgets([]);
       setExpenses([]);
       setMonthlyCap([]);
@@ -32,7 +36,6 @@ export const BudgetsProvider = ({ children }) => {
   }, [isAuthenticated, authLoading, setBudgets, setExpenses, setMonthlyCap]);
 
   function getBudgetExpenses(budgetId) {
-    // Ensure expenses is an array before filtering
     return Array.isArray(expenses) ? expenses.filter((expense) => expense.budgetId === budgetId) : [];
   }
 
@@ -92,9 +95,11 @@ export const BudgetsProvider = ({ children }) => {
   }
 
   if (authLoading) {
+    // console.log("BudgetsProvider: Waiting for auth (authLoading is true).");
     return <Container className="my-4" style={{textAlign: 'center'}}><p>Loading User Data...</p></Container>;
   }
 
+  // console.log("BudgetsProvider: Auth ready. Rendering children. isAuthenticated:", isAuthenticated);
   return (
     <BudgetsContext.Provider
       value={{
