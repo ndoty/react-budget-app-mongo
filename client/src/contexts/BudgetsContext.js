@@ -18,60 +18,48 @@ export function useBudgets() {
 }
 
 export const BudgetsProvider = ({ children }) => {
+  // authLoading from useAuth() will be false once AuthProvider has finished its internalLoading
   const { isAuthenticated, loading: authLoading } = useAuth();
 
-  // console.log("BudgetsProvider - authLoading:", authLoading, "isAuthenticated:", isAuthenticated);
+  // console.log("BudgetsProvider received - authLoading:", authLoading, "isAuthenticated:", isAuthenticated);
 
   const [budgets, setBudgets] = useMongo("budgets", []);
   const [expenses, setExpenses] = useMongo("expenses", []);
   const [monthlyCap, setMonthlyCap] = useMongo("monthlyCap", []);
 
   useEffect(() => {
-    // This effect will clear data if the user logs out OR if auth wasn't ready and now is not authenticated.
     if (!authLoading && !isAuthenticated) {
-      // console.log("BudgetsContext: Clearing data as user is not authenticated or auth state changed to not authenticated.");
+      // console.log("BudgetsContext: Clearing data (auth false, or loading finished and not auth).");
       setBudgets([]);
       setExpenses([]);
       setMonthlyCap([]);
+    } else if (!authLoading && isAuthenticated) {
+      // console.log("BudgetsContext: Auth ready and authenticated. useMongo will fetch.");
+      // Data fetching is handled by useMongo's own useEffect based on isAuthenticated
     }
   }, [isAuthenticated, authLoading, setBudgets, setExpenses, setMonthlyCap]);
 
-  // Functions (addExpense, addBudget, etc. should ideally check isAuthenticated before proceeding)
-  // Example:
-  async function addBudget({ name, max }) {
-    if (!isAuthenticated) {
-      console.error("Cannot add budget: User not authenticated.");
-      return;
-    }
-    if (budgets.find((budget) => budget.name === name)) {
-      alert("Budget with this name already exists.");
-      return;
-    }
-    const newBudget = { id: uuidV4(), name, max };
-    const savedBudget = await postSingleItemToAPI("budgets", newBudget);
-    if (savedBudget) {
-      setBudgets((prevBudgets) => [...prevBudgets, savedBudget]);
-    } else { console.error("Failed to save budget to server"); }
-  }
-  // ... (Implement similar checks for other mutation functions if needed,
-  // though ProtectedRoute should prevent these components from being used when not authenticated)
+  // ... (budget/expense functions - ensure they check isAuthenticated or rely on ProtectedRoute) ...
+  // Ensure these functions are correctly defined as in previous versions.
 
-
-  // If authLoading is true, it means AuthProvider is still figuring out the auth state.
-  // During this time, BudgetsProvider should also indicate loading.
+  // If AuthProvider is still initializing (authLoading is true),
+  // BudgetsProvider shows its own loading state.
   if (authLoading) {
+    // console.log("BudgetsProvider: Waiting for auth (authLoading is true).");
     return <Container className="my-4"><p>Loading budget data (waiting for auth)...</p></Container>;
   }
 
-  // If authLoading is false, AuthProvider has determined the auth state.
-  // Now BudgetsProvider can provide its context.
-  // The useMongo hooks will also see authLoading as false and will fetch data if isAuthenticated is true.
+  // If authLoading is false, it means AuthProvider has initialized.
+  // Now, BudgetsProvider can render its content.
+  // The `isAuthenticated` flag will determine if `useMongo` actually fetches data.
+  // console.log("BudgetsProvider: Auth ready. Rendering actual budget context and children.");
   return (
     <BudgetsContext.Provider
       value={{
         budgets,
         expenses,
         monthlyCap,
+        // ... (rest of the context value, make sure functions are complete)
         getBudgetExpenses: (budgetId) => expenses.filter((expense) => expense.budgetId === budgetId),
         addExpense: async (expenseData) => {
             if (!isAuthenticated) return;
@@ -80,7 +68,16 @@ export const BudgetsProvider = ({ children }) => {
             if (savedExpense) setExpenses((prev) => [...prev, savedExpense]);
             else console.error("Failed to save expense");
         },
-        addBudget, // Use the one defined above with the check
+        addBudget:  async ({ name, max }) => {
+            if (!isAuthenticated) return;
+            if (budgets.find((budget) => budget.name === name)) {
+              alert("Budget with this name already exists."); return;
+            }
+            const newBudget = { id: uuidV4(), name, max };
+            const savedBudget = await postSingleItemToAPI("budgets", newBudget);
+            if (savedBudget) setBudgets((prev) => [...prev, savedBudget]);
+            else console.error("Failed to save budget");
+        },
         deleteBudget: async ({ id }) => {
             if (!isAuthenticated) return;
             const result = await deleteItemFromAPI("budgets", id);
