@@ -15,13 +15,15 @@ module.exports = function (req, res, next) {
   const token = parts[1];
 
   try {
-    // Verify token
+    if (!process.env.JWT_SECRET) {
+      console.error("FATAL ERROR: JWT_SECRET is not defined on the server for middleware.");
+      return res.status(500).json({ msg: 'Server configuration error: JWT secret missing' });
+    }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // Add user from payload
-    req.userId = decoded.user.id;
+    req.userId = decoded.user.id; // Add userId from token payload to request object
     next();
   } catch (err) {
-    console.error("Token verification failed:", err.message);
+    console.error("Token verification failed in middleware:", err.message);
     res.status(401).json({ msg: 'Token is not valid' });
   }
 };
