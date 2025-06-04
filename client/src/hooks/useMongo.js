@@ -1,26 +1,63 @@
-// client/src/hooks/useMongo.js
 import axios from "axios";
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
-// Updated API_URL_BASE definition
 const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget-api.technickservices.com/api";
-// Add a log here too:
-console.log("useMongo: Initial API_URL_BASE value:", API_URL_BASE);
-console.log("useMongo: process.env.REACT_APP_API_URL value:", process.env.REACT_APP_API_URL);
+// Log to ensure the .env variable is picked up, or the fallback is used.
+// console.log("useMongo: API_URL_BASE is set to:", API_URL_BASE);
+// if (!process.env.REACT_APP_API_URL) {
+//   console.warn("useMongo: REACT_APP_API_URL is not set in .env, using fallback:", API_URL_BASE);
+// }
 
-// ... (fetchDataFromAPI, postSingleItemToAPI, deleteItemFromAPI, postMonthlyCapToAPI functions as provided before,
-// ensure they use `${API_URL_BASE}/...` correctly)
 
 export const fetchDataFromAPI = async (key) => {
-  const targetUrl = `${API_URL_BASE}/${key}`;
-  // console.log(`fetchDataFromAPI: Fetching ${targetUrl}`);
-  try { /* ... */ } catch (error) { /* ... */ }
+  try {
+    const targetUrl = `${API_URL_BASE}/${key}`;
+    const response = await axios.get(targetUrl);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching ${key} from ${API_URL_BASE}/${key}:`, error.response ? error.response.data : error.message);
+    if (error.response && error.response.status === 401) {
+      console.error("fetchDataFromAPI: Unauthorized fetch.");
+    }
+    return null;
+  }
 };
-// Apply similar logging to other API functions if needed.
+
+export const postSingleItemToAPI = async (key, item) => {
+  try {
+    const targetUrl = `${API_URL_BASE}/${key}`;
+    const response = await axios.post(targetUrl, item);
+    return response.data;
+  } catch (error) {
+    console.error(`Error posting single ${key} to ${API_URL_BASE}/${key}:`, error.response ? error.response.data : error.message);
+    return null;
+  }
+};
+
+export const deleteItemFromAPI = async (key, itemId) => {
+  try {
+    const targetUrl = `${API_URL_BASE}/${key}/${itemId}`;
+    const response = await axios.delete(targetUrl);
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting ${key} ID ${itemId} from ${API_URL_BASE}/${key}/${itemId}:`, error.response ? error.response.data : error.message);
+    return null;
+  }
+};
+
+export const postMonthlyCapToAPI = async (capData) => {
+  try {
+    const targetUrl = `${API_URL_BASE}/monthlyCap`;
+    const response = await axios.post(targetUrl, capData);
+    return response.data;
+  } catch (error) {
+    console.error(`Error posting monthlyCap to ${API_URL_BASE}/monthlyCap:`, error.response ? error.response.data : error.message);
+    return null;
+  }
+}
 
 export default function useMongo(key, initialDefault = []) {
-  // ... (rest of the hook as previously provided) ...
   const [value, setValue] = useState(initialDefault);
   const { isAuthenticated, loading: authLoading } = useAuth();
 
@@ -28,7 +65,7 @@ export default function useMongo(key, initialDefault = []) {
     const loadData = async () => {
       if (isAuthenticated) {
         const data = await fetchDataFromAPI(key);
-        setValue(Array.isArray(data) ? data : initialDefault); 
+        setValue(Array.isArray(data) ? data : initialDefault);
       } else {
         setValue(initialDefault);
       }
@@ -39,7 +76,7 @@ export default function useMongo(key, initialDefault = []) {
     } else {
        setValue(initialDefault);
     }
-  }, [key, isAuthenticated, authLoading]);
+  }, [key, isAuthenticated, authLoading]); // initialDefault removed from deps
 
   return [value, setValue];
 }
