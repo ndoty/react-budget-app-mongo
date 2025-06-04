@@ -1,8 +1,10 @@
+// client/src/contexts/BudgetsContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Container, Modal, Button, Stack, Form } from "react-bootstrap"; // Modal confirmed here
+import { Container, Modal, Button, Stack, Form } from "react-bootstrap";
 import { v4 as uuidV4 } from "uuid";
-import useMongo, { postSingleItemToAPI, deleteItemFromAPI, postMonthlyCapToAPI, fetchDataFromAPI } from "../hooks/useMongo";
-import { useAuth } from "./AuthContext";
+// Import API functions from useMongo.js - they now expect a token argument
+import { fetchDataFromAPI, postSingleItemToAPI, deleteItemFromAPI, postMonthlyCapToAPI } from "../hooks/useMongo";
+import { useAuth } from "./AuthContext"; // To get the token
 
 const BudgetsContext = createContext(undefined);
 
@@ -17,21 +19,19 @@ export function useBudgets() {
 }
 
 export const BudgetsProvider = ({ children }) => {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, token } = useAuth(); // Get token here
 
+  // useMongo hook itself now uses the token from AuthContext for its initial fetch
   const [budgets, setBudgets] = useMongo("budgets", []);
   const [expenses, setExpenses] = useMongo("expenses", []);
   const [monthlyCap, setMonthlyCap] = useMongo("monthlyCap", []);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      // console.log("BudgetsContext: Clearing data due to logout or initial unauthenticated state.");
       setBudgets([]);
       setExpenses([]);
       setMonthlyCap([]);
     }
-    // When authLoading becomes false and isAuthenticated becomes true (on login),
-    // the useEffect in useMongo will trigger and fetch data.
   }, [isAuthenticated, authLoading, setBudgets, setExpenses, setMonthlyCap]);
 
   function getBudgetExpenses(budgetId) {
@@ -39,55 +39,53 @@ export const BudgetsProvider = ({ children }) => {
   }
 
   async function addExpense({ description, amount, budgetId }) {
-    if (!isAuthenticated) { console.error("User not authenticated"); return; }
+    if (!isAuthenticated || !token) { console.error("User not authenticated/no token"); return; }
     const newExpense = { id: uuidV4(), description, amount, budgetId };
-    const savedExpense = await postSingleItemToAPI("expenses", newExpense);
+    const savedExpense = await postSingleItemToAPI("expenses", newExpense, token); // Pass token
     if (savedExpense) {
-      setExpenses((prevExpenses) => [...(Array.isArray(prevExpenses) ? prevExpenses : []), savedExpense]);
-    } else { console.error("Failed to save expense to server"); }
+      setExpenses((prev) => [...(Array.isArray(prev) ? prev : []), savedExpense]);
+    } else { console.error("Failed to save expense"); }
   }
 
   async function addBudget({ name, max }) {
-    if (!isAuthenticated) { console.error("User not authenticated"); return; }
-    if (Array.isArray(budgets) && budgets.find((budget) => budget.name === name)) {
+    if (!isAuthenticated || !token) { console.error("User not authenticated/no token"); return; }
+    if (Array.isArray(budgets) && budgets.find((b) => b.name === name)) {
       alert("Budget with this name already exists."); return;
     }
     const newBudget = { id: uuidV4(), name, max };
-    const savedBudget = await postSingleItemToAPI("budgets", newBudget);
+    const savedBudget = await postSingleItemToAPI("budgets", newBudget, token); // Pass token
     if (savedBudget) {
-      setBudgets((prevBudgets) => [...(Array.isArray(prevBudgets) ? prevBudgets : []), savedBudget]);
-    } else { console.error("Failed to save budget to server"); }
+      setBudgets((prev) => [...(Array.isArray(prev) ? prev : []), savedBudget]);
+    } else { console.error("Failed to save budget"); }
   }
 
   async function deleteBudgetClient({ id }) {
-    if (!isAuthenticated) { console.error("User not authenticated"); return; }
-    const result = await deleteItemFromAPI("budgets", id);
+    if (!isAuthenticated || !token) { console.error("User not authenticated/no token"); return; }
+    const result = await deleteItemFromAPI("budgets", id, token); // Pass token
     if (result) {
-      setBudgets((prevBudgets) => Array.isArray(prevBudgets) ? prevBudgets.filter((budget) => budget.id !== id) : []);
-      const updatedExpenses = await fetchDataFromAPI("expenses"); // Refetch expenses
+      setBudgets((prev) => Array.isArray(prev) ? prev.filter((b) => b.id !== id) : []);
+      const updatedExpenses = await fetchDataFromAPI("expenses", token); // Pass token for refetch
       if (updatedExpenses) setExpenses(updatedExpenses);
-    } else { console.error("Failed to delete budget from server"); }
+    } else { console.error("Failed to delete budget"); }
   }
 
   async function deleteExpenseClient({ id }) {
-    if (!isAuthenticated) { console.error("User not authenticated"); return; }
-    const result = await deleteItemFromAPI("expenses", id);
+    if (!isAuthenticated || !token) { console.error("User not authenticated/no token"); return; }
+    const result = await deleteItemFromAPI("expenses", id, token); // Pass token
     if (result) {
-      setExpenses((prevExpenses) => Array.isArray(prevExpenses) ? prevExpenses.filter((expense) => expense.id !== id) : []);
-    } else { console.error("Failed to delete expense from server"); }
+      setExpenses((prev) => Array.isArray(prev) ? prev.filter((exp) => exp.id !== id) : []);
+    } else { console.error("Failed to delete expense"); }
   }
 
   async function setMonthlyCapTotal(capAmountStr) {
-    if (!isAuthenticated) { console.error("User not authenticated"); return; }
+    if (!isAuthenticated || !token) { console.error("User not authenticated/no token"); return; }
     const amount = parseFloat(capAmountStr);
     let capDataPayload = {};
-    if (!isNaN(amount) && amount > 0) {
-      capDataPayload = { cap: amount };
-    }
-    const result = await postMonthlyCapToAPI(capDataPayload);
+    if (!isNaN(amount) && amount > 0) capDataPayload = { cap: amount };
+    const result = await postMonthlyCapToAPI(capDataPayload, token); // Pass token
     if (result) {
       setMonthlyCap(result);
-    } else { console.error("Failed to set monthly cap on server"); }
+    } else { console.error("Failed to set monthly cap"); }
   }
 
   if (authLoading) {
@@ -97,12 +95,8 @@ export const BudgetsProvider = ({ children }) => {
   return (
     <BudgetsContext.Provider
       value={{
-        budgets,
-        expenses,
-        monthlyCap,
-        getBudgetExpenses,
-        addExpense,
-        addBudget,
+        budgets, expenses, monthlyCap,
+        getBudgetExpenses, addExpense, addBudget,
         deleteBudget: deleteBudgetClient,
         deleteExpense: deleteExpenseClient,
         setMonthlyCapTotal,
