@@ -1,10 +1,17 @@
 // client/src/contexts/BudgetsContext.js
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Container, Modal, Button, Stack, Form } from "react-bootstrap";
+import { Container, Modal, Button, Stack, Form } from "react-bootstrap"; // Assuming Modal was fixed
 import { v4 as uuidV4 } from "uuid";
-// Import API functions from useMongo.js - they now expect a token argument
-import { fetchDataFromAPI, postSingleItemToAPI, deleteItemFromAPI, postMonthlyCapToAPI } from "../hooks/useMongo";
-import { useAuth } from "./AuthContext"; // To get the token
+
+// CRITICAL IMPORT: Ensure this path is correct and useMongo is default exported
+import useMongo, { 
+  postSingleItemToAPI, 
+  deleteItemFromAPI, 
+  postMonthlyCapToAPI, 
+  fetchDataFromAPI 
+} from "../hooks/useMongo"; // Path relative to this file (src/contexts/useMongo.js)
+
+import { useAuth } from "./AuthContext"; // Ensure correct path
 
 const BudgetsContext = createContext(undefined);
 
@@ -19,9 +26,9 @@ export function useBudgets() {
 }
 
 export const BudgetsProvider = ({ children }) => {
-  const { isAuthenticated, loading: authLoading, token } = useAuth(); // Get token here
+  const { isAuthenticated, loading: authLoading, token } = useAuth();
 
-  // useMongo hook itself now uses the token from AuthContext for its initial fetch
+  // These lines use useMongo. If 'useMongo is not defined', the import failed or is incorrect.
   const [budgets, setBudgets] = useMongo("budgets", []);
   const [expenses, setExpenses] = useMongo("expenses", []);
   const [monthlyCap, setMonthlyCap] = useMongo("monthlyCap", []);
@@ -39,50 +46,50 @@ export const BudgetsProvider = ({ children }) => {
   }
 
   async function addExpense({ description, amount, budgetId }) {
-    if (!isAuthenticated || !token) { console.error("User not authenticated/no token"); return; }
+    if (!isAuthenticated || !token) { console.error("User not authenticated/no token for addExpense"); return; }
     const newExpense = { id: uuidV4(), description, amount, budgetId };
-    const savedExpense = await postSingleItemToAPI("expenses", newExpense, token); // Pass token
+    const savedExpense = await postSingleItemToAPI("expenses", newExpense, token);
     if (savedExpense) {
       setExpenses((prev) => [...(Array.isArray(prev) ? prev : []), savedExpense]);
     } else { console.error("Failed to save expense"); }
   }
 
   async function addBudget({ name, max }) {
-    if (!isAuthenticated || !token) { console.error("User not authenticated/no token"); return; }
+    if (!isAuthenticated || !token) { console.error("User not authenticated/no token for addBudget"); return; }
     if (Array.isArray(budgets) && budgets.find((b) => b.name === name)) {
       alert("Budget with this name already exists."); return;
     }
     const newBudget = { id: uuidV4(), name, max };
-    const savedBudget = await postSingleItemToAPI("budgets", newBudget, token); // Pass token
+    const savedBudget = await postSingleItemToAPI("budgets", newBudget, token);
     if (savedBudget) {
       setBudgets((prev) => [...(Array.isArray(prev) ? prev : []), savedBudget]);
     } else { console.error("Failed to save budget"); }
   }
 
   async function deleteBudgetClient({ id }) {
-    if (!isAuthenticated || !token) { console.error("User not authenticated/no token"); return; }
-    const result = await deleteItemFromAPI("budgets", id, token); // Pass token
+    if (!isAuthenticated || !token) { console.error("User not authenticated/no token for deleteBudget"); return; }
+    const result = await deleteItemFromAPI("budgets", id, token);
     if (result) {
       setBudgets((prev) => Array.isArray(prev) ? prev.filter((b) => b.id !== id) : []);
-      const updatedExpenses = await fetchDataFromAPI("expenses", token); // Pass token for refetch
+      const updatedExpenses = await fetchDataFromAPI("expenses", token);
       if (updatedExpenses) setExpenses(updatedExpenses);
     } else { console.error("Failed to delete budget"); }
   }
 
   async function deleteExpenseClient({ id }) {
-    if (!isAuthenticated || !token) { console.error("User not authenticated/no token"); return; }
-    const result = await deleteItemFromAPI("expenses", id, token); // Pass token
+    if (!isAuthenticated || !token) { console.error("User not authenticated/no token for deleteExpense"); return; }
+    const result = await deleteItemFromAPI("expenses", id, token);
     if (result) {
       setExpenses((prev) => Array.isArray(prev) ? prev.filter((exp) => exp.id !== id) : []);
     } else { console.error("Failed to delete expense"); }
   }
 
   async function setMonthlyCapTotal(capAmountStr) {
-    if (!isAuthenticated || !token) { console.error("User not authenticated/no token"); return; }
+    if (!isAuthenticated || !token) { console.error("User not authenticated/no token for setMonthlyCap"); return; }
     const amount = parseFloat(capAmountStr);
     let capDataPayload = {};
     if (!isNaN(amount) && amount > 0) capDataPayload = { cap: amount };
-    const result = await postMonthlyCapToAPI(capDataPayload, token); // Pass token
+    const result = await postMonthlyCapToAPI(capDataPayload, token);
     if (result) {
       setMonthlyCap(result);
     } else { console.error("Failed to set monthly cap"); }
