@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Container } from "react-bootstrap";
+import { Container, Modal, Button, Stack, Form } from "react-bootstrap"; // Ensure Modal is here
 import { v4 as uuidV4 } from "uuid";
 import useMongo, { postSingleItemToAPI, deleteItemFromAPI, postMonthlyCapToAPI, fetchDataFromAPI } from "../hooks/useMongo";
 import { useAuth } from "./AuthContext";
@@ -11,7 +11,6 @@ export const UNCATEGORIZED_BUDGET_ID = "Uncategorized";
 export function useBudgets() {
   const context = useContext(BudgetsContext);
   if (context === undefined) {
-    // This error would indicate BudgetsProvider isn't wrapping the component using useBudgets
     throw new Error("useBudgets must be used within a BudgetsProvider");
   }
   return context;
@@ -20,15 +19,12 @@ export function useBudgets() {
 export const BudgetsProvider = ({ children }) => {
   const { isAuthenticated, loading: authLoading } = useAuth();
 
-  // console.log("BudgetsProvider - Render - authLoading:", authLoading, "isAuthenticated:", isAuthenticated);
-
   const [budgets, setBudgets] = useMongo("budgets", []);
   const [expenses, setExpenses] = useMongo("expenses", []);
   const [monthlyCap, setMonthlyCap] = useMongo("monthlyCap", []);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      // console.log("BudgetsContext: Clearing data as user is not authenticated or auth state changed to not authenticated.");
       setBudgets([]);
       setExpenses([]);
       setMonthlyCap([]);
@@ -95,11 +91,9 @@ export const BudgetsProvider = ({ children }) => {
   }
 
   if (authLoading) {
-    // console.log("BudgetsProvider: Waiting for auth (authLoading is true).");
-    return <Container className="my-4" style={{textAlign: 'center'}}><p>Loading User Data...</p></Container>;
+    return <Container className="my-4" style={{ textAlign: 'center' }}><p>Loading User Data...</p></Container>;
   }
 
-  // console.log("BudgetsProvider: Auth ready. Rendering children. isAuthenticated:", isAuthenticated);
   return (
     <BudgetsContext.Provider
       value={{
