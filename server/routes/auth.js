@@ -1,116 +1,61 @@
+// server/routes/auth.js (ensure this is correct)
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User'); // Adjusted path if necessary
-require('dotenv').config();
+// ... (bcrypt, jwt, User model, dotenv requires) ...
+console.log("SERVER: server/routes/auth.js - File loaded, router instance created.");
 
-// @route   POST /api/auth/register
-// @desc    Register user
-// @access  Public
+
+// Test GET route
+router.get('/test-auth-route', (req, res) => {
+    console.log("SERVER: GET /api/auth/test-auth-route (from file) hit!");
+    res.status(200).json({ message: "Auth router test GET route (from file) is working!" });
+});
+
+// POST /register (as defined before)
 router.post('/register', async (req, res) => {
+  // ... your full registration logic from the previous "full files" response ...
+  console.log(`SERVER: POST /api/auth/register (from file) hit with body:`, req.body ? JSON.stringify(req.body).substring(0, 100) + "..." : "undefined");
   const { username, password } = req.body;
 
   if (!username || !password) {
+    console.log("SERVER: Registration failed - missing fields.");
     return res.status(400).json({ msg: 'Please enter all fields' });
   }
-
-  try {
+  // ... (rest of the registration logic)
+  // For brevity, I'm not pasting the whole thing again, but ensure it's the complete version.
+  // Make sure it ends with sending a response.
+  // For this test, you can even simplify it:
+  // res.status(201).json({ message: "Register route hit (from file)", username });
+  // But use the full version if you want to test DB interaction.
+  // Ensure the full logic from the "full files" response for server/routes/auth.js is here.
+  const { User } = require('../models/User'); // Example, path might vary
+   try {
     let user = await User.findOne({ username: username.toLowerCase() });
     if (user) {
       return res.status(400).json({ msg: 'User already exists' });
     }
-
-    user = new User({
-      username: username.toLowerCase(),
-      password,
-    });
-
+    user = new User({ username: username.toLowerCase(), password });
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
-
     await user.save();
-
-    const payload = {
-      user: {
-        id: user.id,
-      },
-    };
-
-    if (!process.env.JWT_SECRET) {
-      console.error("FATAL ERROR: JWT_SECRET is not defined in .env for registration token signing.");
-      return res.status(201).json({ msg: 'User registered, but token generation failed. Please login.' });
-    }
-
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: '5h' },
-      (err, token) => {
-        if (err) {
-          console.error("JWT signing error during registration:", err);
-          return res.status(201).json({ msg: 'User registered, but token generation error. Please login.' });
-        }
+    const payload = { user: { id: user.id } };
+    jwt.sign(payload,process.env.JWT_SECRET,{ expiresIn: '5h' }, (err, token) => {
+        if (err) throw err;
         res.status(201).json({ token });
       }
     );
   } catch (err) {
-    console.error("Registration server error:", err.message, err.stack);
-    if (err.code === 11000) {
-        return res.status(400).json({ msg: 'Username already exists.' });
-    }
-    res.status(500).json({ msg: 'Server error during registration process' });
+    console.error("Reg Error:", err.message);
+    res.status(500).send("Server Reg Error");
   }
 });
 
-// @route   POST /api/auth/login
-// @desc    Authenticate user & get token
-// @access  Public
+
+// POST /login (as defined before)
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-
-  if (!username || !password) {
-    return res.status(400).json({ msg: 'Please enter all fields' });
-  }
-
-  try {
-    const user = await User.findOne({ username: username.toLowerCase() });
-    if (!user) {
-      return res.status(400).json({ msg: 'Invalid credentials (user not found)' });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ msg: 'Invalid credentials (password mismatch)' });
-    }
-
-    const payload = {
-      user: {
-        id: user.id,
-      },
-    };
-    
-    if (!process.env.JWT_SECRET) {
-      console.error("FATAL ERROR: JWT_SECRET is not defined in .env for login token signing.");
-      return res.status(500).json({ msg: 'Server configuration error: Cannot generate token.' });
-    }
-
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: '5h' },
-      (err, token) => {
-        if (err) {
-            console.error("JWT signing error during login:", err);
-            return res.status(500).json({msg: 'Error generating token during login'});
-        }
-        res.json({ token, userId: user.id, username: user.username });
-      }
-    );
-  } catch (err) {
-    console.error("Login server error:", err.message, err.stack);
-    res.status(500).json({ msg: 'Server error during login process' });
-  }
+  // ... your full login logic ...
+  // Ensure the full logic from the "full files" response for server/routes/auth.js is here.
+    res.status(200).json({message: "Login route placeholder hit"});
 });
 
 module.exports = router;
