@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container } from "react-bootstrap"; 
 
-const API_URL = process.env.REACT_APP_API_URL || "//localhost:5000/api";
+const API_URL = process.env.REACT_APP_API_URL || "/api";
 
 const defaultAuthContextValue = {
   token: null,
