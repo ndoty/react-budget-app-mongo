@@ -1,15 +1,18 @@
 import axios from "axios";
 import { useState, useEffect } from "react";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext"; // Ensure correct path
 
-const API_URL_BASE = process.env.REACT_APP_API_URL || "//localhost:5000/api";
+// Updated API_URL_BASE definition
+const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget-api.technickservices.com/api";
 
 export const fetchDataFromAPI = async (key) => {
   try {
-    const response = await axios.get(`${API_URL_BASE}/${key}`);
+    const targetUrl = `${API_URL_BASE}/${key}`;
+    // console.log(`fetchDataFromAPI: Fetching ${targetUrl}`);
+    const response = await axios.get(targetUrl);
     return response.data;
   } catch (error) {
-    console.error(`Error fetching ${key}:`, error.response ? error.response.data : error.message);
+    console.error(`Error fetching ${key} from ${API_URL_BASE}/${key}:`, error.response ? error.response.data : error.message);
     if (error.response && error.response.status === 401) {
       console.error("fetchDataFromAPI: Unauthorized fetch.");
     }
@@ -19,30 +22,36 @@ export const fetchDataFromAPI = async (key) => {
 
 export const postSingleItemToAPI = async (key, item) => {
   try {
-    const response = await axios.post(`${API_URL_BASE}/${key}`, item);
+    const targetUrl = `${API_URL_BASE}/${key}`;
+    // console.log(`postSingleItemToAPI: Posting to ${targetUrl}`);
+    const response = await axios.post(targetUrl, item);
     return response.data;
   } catch (error) {
-    console.error(`Error posting single ${key}:`, error.response ? error.response.data : error.message);
+    console.error(`Error posting single ${key} to ${API_URL_BASE}/${key}:`, error.response ? error.response.data : error.message);
     return null;
   }
 };
 
 export const deleteItemFromAPI = async (key, itemId) => {
   try {
-    const response = await axios.delete(`${API_URL_BASE}/${key}/${itemId}`);
+    const targetUrl = `${API_URL_BASE}/${key}/${itemId}`;
+    // console.log(`deleteItemFromAPI: Deleting from ${targetUrl}`);
+    const response = await axios.delete(targetUrl);
     return response.data;
   } catch (error) {
-    console.error(`Error deleting ${key} ID ${itemId}:`, error.response ? error.response.data : error.message);
+    console.error(`Error deleting ${key} ID ${itemId} from ${API_URL_BASE}/${key}/${itemId}:`, error.response ? error.response.data : error.message);
     return null;
   }
 };
 
 export const postMonthlyCapToAPI = async (capData) => {
   try {
-    const response = await axios.post(`${API_URL_BASE}/monthlyCap`, capData);
+    const targetUrl = `${API_URL_BASE}/monthlyCap`;
+    // console.log(`postMonthlyCapToAPI: Posting to ${targetUrl}`);
+    const response = await axios.post(targetUrl, capData);
     return response.data;
   } catch (error) {
-    console.error(`Error posting monthlyCap:`, error.response ? error.response.data : error.message);
+    console.error(`Error posting monthlyCap to ${API_URL_BASE}/monthlyCap:`, error.response ? error.response.data : error.message);
     return null;
   }
 }
@@ -52,26 +61,22 @@ export default function useMongo(key, initialDefault = []) {
   const { isAuthenticated, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    // console.log(`useMongo (${key}) - Effect triggered. authLoading: ${authLoading}, isAuthenticated: ${isAuthenticated}`);
+    // console.log(`useMongo (${key}) - Effect triggered. authLoading: ${authLoading}, isAuthenticated: ${isAuthenticated}, API_URL_BASE: ${API_URL_BASE}`);
     const loadData = async () => {
       if (isAuthenticated) {
-        // console.log(`useMongo (${key}): Auth ready and authenticated, fetching data.`);
         const data = await fetchDataFromAPI(key);
         setValue(Array.isArray(data) ? data : initialDefault); 
       } else {
-        // console.log(`useMongo (${key}): Not authenticated. Setting to initialDefault.`);
         setValue(initialDefault);
       }
     };
 
     if (!authLoading) {
-      // console.log(`useMongo (${key}): Auth loading complete. Proceeding with loadData logic.`);
       loadData();
     } else {
-      // console.log(`useMongo (${key}): Auth is still loading. Setting to initialDefault to avoid stale data.`);
-       setValue(initialDefault); // Ensure data is cleared/reset if auth is loading
+       setValue(initialDefault);
     }
-  }, [key, isAuthenticated, authLoading]); // initialDefault removed as it might cause loops if it's a new array/object ref each render
+  }, [key, isAuthenticated, authLoading]);
 
   return [value, setValue];
 }
