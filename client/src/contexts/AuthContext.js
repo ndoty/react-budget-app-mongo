@@ -4,84 +4,71 @@ import axios from 'axios';
 import { Container } from "react-bootstrap";
 
 const API_URL = process.env.REACT_APP_API_URL || "https://budget-api.technickservices.com/api";
-console.log("AuthContext: API_URL is set to:", API_URL);
+console.log("CLIENT AuthContext: API_URL is set to:", API_URL);
+if (!process.env.REACT_APP_API_URL) {
+  console.warn("CLIENT AuthContext: REACT_APP_API_URL is not set in .env, using fallback:", API_URL);
+}
 
 const defaultAuthContextValue = {
-  token: null,
-  currentUser: null,
-  isAuthenticated: false,
-  loading: true,
-  login: async () => { return { success: false, message: 'Auth not ready' }; },
-  register: async () => { return { success: false, message: 'Auth not ready' }; },
+  token: null, currentUser: null, isAuthenticated: false, loading: true,
+  login: async () => ({ success: false, message: 'Auth not ready' }),
+  register: async () => ({ success: false, message: 'Auth not ready' }),
   logout: () => {},
 };
 
 const AuthContext = createContext(defaultAuthContextValue);
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export function useAuth() { return useContext(AuthContext); }
 
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [internalLoading, setInternalLoading] = useState(true);
 
-  // Effect to initialize auth state from localStorage on component mount
   useEffect(() => {
-    // console.log("AuthProvider Initializer: START");
     const storedToken = localStorage.getItem('token');
     const storedUserString = localStorage.getItem('currentUser');
-
     if (storedToken) {
-      // console.log("AuthProvider Initializer: Token found in localStorage.", storedToken.substring(0,10) + "...");
-      setToken(storedToken); // This will trigger the token-dependent useEffect below
+      setToken(storedToken); // Triggers the [token] useEffect below
       if (storedUserString) {
-        try {
-          setCurrentUser(JSON.parse(storedUserString));
-        } catch (e) {
-          localStorage.removeItem('currentUser');
-          setCurrentUser(null);
-        }
-      } else {
-        setCurrentUser(null);
+        try { setCurrentUser(JSON.parse(storedUserString)); }
+        catch (e) { localStorage.removeItem('currentUser'); setCurrentUser(null); }
       }
     } else {
-      // console.log("AuthProvider Initializer: No token found in localStorage.");
       setCurrentUser(null);
-      // Ensure Axios header is clear if no token from the start
-      delete axios.defaults.headers.common['Authorization'];
+      // Explicitly ensure header is clear if no token on initial load AND token state is already null
+      if (axios.defaults.headers.common['Authorization']) {
+          console.log("CLIENT AuthContext Initializer: No stored token, ensuring Axios header is clear.");
+          delete axios.defaults.headers.common['Authorization'];
+      }
     }
     setInternalLoading(false);
-    // console.log("AuthProvider Initializer: END, internalLoading set to false.");
   }, []);
 
-  // Effect to manage Axios default Authorization header whenever the token state changes
   useEffect(() => {
     if (token) {
-      console.log("AuthProvider TokenEffect: Token EXISTS. Setting Axios default Authorization header.", token.substring(0,10) + "...");
+      console.log("CLIENT AuthContext TokenEffect: Token state updated to a TRUTHY value. Setting Axios default Authorization header. Token starts with:", token.substring(0, 20));
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     } else {
-      console.log("AuthProvider TokenEffect: Token is NULL/empty. Deleting Axios default Authorization header.");
+      console.log("CLIENT AuthContext TokenEffect: Token state updated to a FALSY value (null/undefined). Deleting Axios default Authorization header.");
       delete axios.defaults.headers.common['Authorization'];
     }
-  }, [token]); // This effect specifically depends on the token state
+    // Log current defaults to confirm
+    // console.log("CLIENT AuthContext TokenEffect: Current Axios default headers:", JSON.stringify(axios.defaults.headers.common));
+  }, [token]);
 
   const login = async (username, password) => {
     const targetUrl = `${API_URL}/auth/login`;
-    // console.log(`CLIENT AuthContext: Attempting to POST to LOGIN: ${targetUrl}`);
     try {
       const res = await axios.post(targetUrl, { username, password });
       localStorage.setItem('token', res.data.token);
       const userData = { id: res.data.userId, username: res.data.username };
       localStorage.setItem('currentUser', JSON.stringify(userData));
-      
-      // CRITICAL: Update the token state, which will trigger the useEffect above to set Axios headers
-      setToken(res.data.token);
+      console.log("CLIENT AuthContext login: Login API success. About to setToken state with token starting:", res.data.token.substring(0,20));
+      setToken(res.data.token); // This triggers the useEffect above
       setCurrentUser(userData);
-      console.log("CLIENT AuthContext: Login successful. Token state set.");
       return { success: true };
-    } catch (error) {
+    } catch (error) { /* ... (error logging as before) ... */ 
       console.error("CLIENT AuthContext: Login error -", error.response ? `${error.response.status} ${JSON.stringify(error.response.data)}` : error.message);
       return { success: false, message: error.response?.data?.msg || `Login failed: ${error.message || 'Please try again.'}` };
     }
@@ -89,44 +76,30 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (username, password) => {
     const targetUrl = `${API_URL}/auth/register`;
-    // ... (register logic as before)
     try {
       const response = await axios.post(targetUrl, { username, password });
-       if (response.status === 201 || response.status === 200) {
-        return { success: true };
-      } else {
-        return { success: false, message: response.data?.msg || `Registration error` };
-      }
-    } catch (error) {
-      // ... (error handling as before)
-      return { success: false, message: error.response?.data?.msg || 'Registration failed server side' };
+      return { success: true, data: response.data };
+    } catch (error) { /* ... (error logging as before) ... */ 
+      let message = 'Registration failed.';
+      if (error.response) message = error.response.data.msg || `Server error: ${error.response.status}`;
+      else if (error.request) message = `Network error at ${targetUrl}.`;
+      else message = `Client error: ${error.message}`;
+      return { success: false, message };
     }
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('currentUser');
-    setToken(null); // This will trigger the token-dependent useEffect to clear Axios header
+    setToken(null); // Triggers useEffect to clear header
     setCurrentUser(null);
   };
 
-  const contextValue = {
-    token,
-    currentUser,
-    isAuthenticated: !!token,
-    loading: internalLoading,
-    login,
-    register,
-    logout,
-  };
+  const contextValue = { token, currentUser, isAuthenticated: !!token, loading: internalLoading, login, register, logout };
 
   if (internalLoading) {
     return <Container className="my-4" style={{ textAlign: 'center' }}><p>Initializing Authentication...</p></Container>;
   }
 
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 };
