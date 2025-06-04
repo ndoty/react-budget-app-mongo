@@ -1,15 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container } from "react-bootstrap"; // For AuthProvider's own loading UI
+import { Container } from "react-bootstrap"; 
 
-// Ensure your .env file in the `client` folder has this (e.g., REACT_APP_API_URL=http://localhost:5000/api)
 const API_URL = process.env.REACT_APP_API_URL || "//localhost:5000/api";
 
 const defaultAuthContextValue = {
   token: null,
   currentUser: null,
   isAuthenticated: false,
-  loading: true, // Consumers will see this as true initially
+  loading: true, 
   login: async () => { console.error("Login function not ready"); return { success: false, message: 'Auth not ready' }; },
   register: async () => { console.error("Register function not ready"); return { success: false, message: 'Auth not ready' }; },
   logout: () => { console.error("Logout function not ready"); },
@@ -24,53 +23,40 @@ export function useAuth() {
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-  const [internalLoading, setInternalLoading] = useState(true); // AuthProvider's own setup loading
+  const [internalLoading, setInternalLoading] = useState(true); 
 
   useEffect(() => {
-    console.log("AuthProvider: Mount & Initial Effect - Start");
     const storedToken = localStorage.getItem('token');
     const storedUserString = localStorage.getItem('currentUser');
-
     if (storedToken) {
-      console.log("AuthProvider: Token found in localStorage.");
-      setToken(storedToken); // This will trigger the separate useEffect for Axios headers
+      setToken(storedToken); 
       if (storedUserString) {
         try {
-          const parsedUser = JSON.parse(storedUserString);
-          setCurrentUser(parsedUser);
-          console.log("AuthProvider: User found in localStorage.", parsedUser);
+          setCurrentUser(JSON.parse(storedUserString));
         } catch (e) {
-          console.error("AuthProvider: Error parsing stored currentUser", e);
-          localStorage.removeItem('currentUser'); // Clear corrupted data
+          localStorage.removeItem('currentUser');
           setCurrentUser(null);
         }
       } else {
-        setCurrentUser(null); // No stored user if string is null/undefined
+        setCurrentUser(null);
       }
     } else {
-      console.log("AuthProvider: No token found in localStorage.");
-      setCurrentUser(null); // Ensure user is null if no token
-      delete axios.defaults.headers.common['Authorization']; // Explicitly clear if no token initially
+      setCurrentUser(null); 
+      delete axios.defaults.headers.common['Authorization']; 
     }
-
-    console.log("AuthProvider: Initial Effect - Setting internalLoading to false.");
-    setInternalLoading(false); // Mark AuthProvider's setup as complete
-  }, []); // Empty dependency array: runs only once on mount
+    setInternalLoading(false); 
+  }, []); 
 
   useEffect(() => {
-    // This effect solely manages the Axios default header based on the token state
     if (token) {
-      // console.log("AuthProvider: Token state updated, setting Axios header.");
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     } else {
-      // console.log("AuthProvider: Token state is null/cleared, deleting Axios header.");
       delete axios.defaults.headers.common['Authorization'];
     }
-  }, [token]); // Runs when token changes
+  }, [token]); 
 
   const login = async (username, password) => {
     try {
-      console.log(`AuthProvider: Logging in user ${username} at ${API_URL}/auth/login`);
       const res = await axios.post(`${API_URL}/auth/login`, { username, password });
       localStorage.setItem('token', res.data.token);
       const userData = { id: res.data.userId, username: res.data.username };
@@ -85,8 +71,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (username, password) => {
+    console.log(`Attempting registration for ${username} at ${API_URL}/auth/register`);
     try {
-      console.log(`AuthProvider: Registering user ${username} at ${API_URL}/auth/register`);
       const response = await axios.post(`${API_URL}/auth/register`, { username, password });
        if (response.status === 201 || response.status === 200) {
         console.log("Registration API call successful:", response.data);
@@ -112,7 +98,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    // console.log("AuthProvider: Logging out.");
     localStorage.removeItem('token');
     localStorage.removeItem('currentUser');
     setToken(null); 
@@ -123,19 +108,16 @@ export const AuthProvider = ({ children }) => {
     token,
     currentUser,
     isAuthenticated: !!token, 
-    loading: internalLoading, // This 'loading' is what consumers will get
+    loading: internalLoading, 
     login,
     register,
     logout,
   };
 
-  // AuthProvider renders its children ONLY when its internalLoading is false.
   if (internalLoading) {
-    // console.log("AuthProvider: Is loading (internalLoading is true). Showing init message.");
     return <Container className="my-4" style={{textAlign: 'center'}}><p>Initializing Authentication...</p></Container>;
   }
 
-  // console.log("AuthProvider: internalLoading is false. Rendering Provider. Context loading state will be:", contextValue.loading);
   return (
     <AuthContext.Provider value={contextValue}>
       {children}
