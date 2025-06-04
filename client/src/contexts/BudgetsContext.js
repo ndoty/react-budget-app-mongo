@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Container, Modal, Button, Stack, Form } from "react-bootstrap"; // Ensure Modal is here
+import { Container, Modal, Button, Stack, Form } from "react-bootstrap"; // Modal confirmed here
 import { v4 as uuidV4 } from "uuid";
 import useMongo, { postSingleItemToAPI, deleteItemFromAPI, postMonthlyCapToAPI, fetchDataFromAPI } from "../hooks/useMongo";
 import { useAuth } from "./AuthContext";
@@ -25,10 +25,13 @@ export const BudgetsProvider = ({ children }) => {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
+      // console.log("BudgetsContext: Clearing data due to logout or initial unauthenticated state.");
       setBudgets([]);
       setExpenses([]);
       setMonthlyCap([]);
     }
+    // When authLoading becomes false and isAuthenticated becomes true (on login),
+    // the useEffect in useMongo will trigger and fetch data.
   }, [isAuthenticated, authLoading, setBudgets, setExpenses, setMonthlyCap]);
 
   function getBudgetExpenses(budgetId) {
@@ -36,7 +39,7 @@ export const BudgetsProvider = ({ children }) => {
   }
 
   async function addExpense({ description, amount, budgetId }) {
-    if (!isAuthenticated) { console.error("User not authenticated, cannot add expense"); return; }
+    if (!isAuthenticated) { console.error("User not authenticated"); return; }
     const newExpense = { id: uuidV4(), description, amount, budgetId };
     const savedExpense = await postSingleItemToAPI("expenses", newExpense);
     if (savedExpense) {
@@ -45,10 +48,9 @@ export const BudgetsProvider = ({ children }) => {
   }
 
   async function addBudget({ name, max }) {
-    if (!isAuthenticated) { console.error("User not authenticated, cannot add budget"); return; }
+    if (!isAuthenticated) { console.error("User not authenticated"); return; }
     if (Array.isArray(budgets) && budgets.find((budget) => budget.name === name)) {
-      alert("Budget with this name already exists.");
-      return;
+      alert("Budget with this name already exists."); return;
     }
     const newBudget = { id: uuidV4(), name, max };
     const savedBudget = await postSingleItemToAPI("budgets", newBudget);
@@ -58,17 +60,17 @@ export const BudgetsProvider = ({ children }) => {
   }
 
   async function deleteBudgetClient({ id }) {
-    if (!isAuthenticated) { console.error("User not authenticated, cannot delete budget"); return; }
+    if (!isAuthenticated) { console.error("User not authenticated"); return; }
     const result = await deleteItemFromAPI("budgets", id);
     if (result) {
       setBudgets((prevBudgets) => Array.isArray(prevBudgets) ? prevBudgets.filter((budget) => budget.id !== id) : []);
-      const updatedExpenses = await fetchDataFromAPI("expenses");
+      const updatedExpenses = await fetchDataFromAPI("expenses"); // Refetch expenses
       if (updatedExpenses) setExpenses(updatedExpenses);
     } else { console.error("Failed to delete budget from server"); }
   }
 
   async function deleteExpenseClient({ id }) {
-    if (!isAuthenticated) { console.error("User not authenticated, cannot delete expense"); return; }
+    if (!isAuthenticated) { console.error("User not authenticated"); return; }
     const result = await deleteItemFromAPI("expenses", id);
     if (result) {
       setExpenses((prevExpenses) => Array.isArray(prevExpenses) ? prevExpenses.filter((expense) => expense.id !== id) : []);
@@ -76,7 +78,7 @@ export const BudgetsProvider = ({ children }) => {
   }
 
   async function setMonthlyCapTotal(capAmountStr) {
-    if (!isAuthenticated) { console.error("User not authenticated, cannot set cap"); return; }
+    if (!isAuthenticated) { console.error("User not authenticated"); return; }
     const amount = parseFloat(capAmountStr);
     let capDataPayload = {};
     if (!isNaN(amount) && amount > 0) {
@@ -85,13 +87,11 @@ export const BudgetsProvider = ({ children }) => {
     const result = await postMonthlyCapToAPI(capDataPayload);
     if (result) {
       setMonthlyCap(result);
-    } else {
-      console.error("Failed to set monthly cap on server");
-    }
+    } else { console.error("Failed to set monthly cap on server"); }
   }
 
   if (authLoading) {
-    return <Container className="my-4" style={{ textAlign: 'center' }}><p>Loading User Data...</p></Container>;
+    return <Container className="my-4" style={{ textAlign: 'center' }}><p>Loading User Data (waiting for auth)...</p></Container>;
   }
 
   return (
