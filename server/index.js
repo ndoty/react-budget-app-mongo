@@ -5,33 +5,32 @@ const cors = require('cors');
 const mongoose = require("mongoose");
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000; // This is the internal port the backend listens on
 
 // --- CORS Configuration ---
-const clientAppUrl = "https://budget.technickservices.com";
+// Define the allowed origins. Add others if needed (e.g., www version, localhost for dev)
+const allowedOrigins = [
+  "https://budget.technickservices.com", // Your frontend production URL
+  "http://budget.technickservices.com",  // If served over HTTP
+  "http://localhost:3000"               // For local client development
+];
 
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    // Allow your specific frontend domain(s)
-    if ([clientAppUrl, "http://localhost:3000"].indexOf(origin) !== -1) { // Added localhost:3000 for dev
+    // OR if origin is in allowedOrigins list
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       console.warn(`CORS: Blocked request from origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
     }
   },
-  optionsSuccessStatus: 200 // For legacy browser compatibility
+  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 };
-app.use(cors(corsOptions)); // Use configured CORS
-// If you prefer to keep it open during extended development/testing, you can revert to:
-// app.use(cors());
+app.use(cors(corsOptions));
 
 app.use(express.json());
-
-// ... (rest of your server/index.js file: MongoDB connection, route mounting, error handlers, app.listen)
-// Ensure all other parts of server/index.js are the same as the last fully working version for curl tests.
 
 // --- MongoDB Connection ---
 const mongoUser = process.env.MONGO_USER;
@@ -51,30 +50,31 @@ mongoose.connect(mongoConnectionString, {
 // --- ROUTES ---
 console.log("SERVER LOG: Registering routes...");
 
-app.get('/server-status', (req, res) => {
+app.get('/server-status', (req, res) => { // This route is on the backend at /server-status
   console.log(`SERVER LOG: GET /server-status route hit at ${new Date().toISOString()}`);
-  res.status(200).send('Backend server is alive and the /server-status route is directly on the app object.');
+  res.status(200).send('Backend server (budget-api) is alive and the /server-status route is directly on the app object.');
 });
 
 try {
     console.log("SERVER LOG: Attempting to require and mount ./routes/auth ...");
-    const authRoutes = require('./routes/auth');
-    app.use('/api/auth', authRoutes);
+    const authRoutes = require('./routes/auth'); 
+    app.use('/api/auth', authRoutes); // All routes in auth.js will be prefixed with /api/auth
     console.log("SERVER LOG: /api/auth routes *should* be mounted successfully.");
 } catch (e) {
     console.error("SERVER ERROR: CRITICAL - Failed to load or use ./routes/auth.js! Details:", e);
 }
 
-const authMiddleware = require('./middleware/authMiddleware');
-const Budget = require("./models/Budget");
-const Expense = require("./models/Expense");
-const MonthlyCap = require('./models/MonthlyCap');
+const authMiddleware = require('./middleware/authMiddleware'); 
+const Budget = require("./models/Budget"); 
+const Expense = require("./models/Expense"); 
+const MonthlyCap = require('./models/MonthlyCap'); 
 
+// --- Protected Data API Routes ---
+// (These should be the same as the last full backend server/index.js version)
 app.get("/api/budgets", authMiddleware, async (req, res) => {
   try { const budgets = await Budget.find({ userId: req.userId }); res.status(200).json(budgets); }
   catch (error) { console.error("GET /api/budgets Error:", error); res.status(500).json({ msg: "Server Error Fetching Budgets" }); }
 });
-// ... (Include all your other API routes for budgets, expenses, monthlyCap as defined previously) ...
 app.post("/api/budgets", authMiddleware, async (req, res) => {
   try { const { name, max, id: clientId } = req.body; if (name === undefined || max === undefined || clientId === undefined) { return res.status(400).json({ msg: "Missing required budget fields (id, name, max)."}); } const newBudget = new Budget({ name, max, id: clientId, userId: req.userId }); await newBudget.save(); res.status(201).json(newBudget); }
   catch (error) { console.error("POST /api/budgets Error:", error); res.status(500).json({ msg: "Server Error Creating Budget" }); }
@@ -112,7 +112,7 @@ app.use('/api/*', (req, res) => {
 });
 app.use('*', (req, res) => {
   console.log(`SERVER LOG: General 404. Unhandled route: ${req.method} ${req.originalUrl}`);
-  res.status(404).send(`Cannot ${req.method} ${req.originalUrl}. Resource not found on server.`);
+  res.status(404).send(`Cannot ${req.method} ${req.originalUrl}. Resource not found on this server (budget-api).`);
 });
 
 // --- Global Error Handler ---
@@ -127,5 +127,5 @@ app.listen(PORT, (err) => {
     console.error(`SERVER ERROR: Failed to start express server on port ${PORT}:`, err);
     return;
   }
-  console.log(`SERVER LOG: Express server is listening on port ${PORT}`);
+  console.log(`SERVER LOG: Express server (budget-api) is listening on port ${PORT}`);
 });
