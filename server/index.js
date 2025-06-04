@@ -12,7 +12,7 @@ const Expense = require("./models/Expense");
 const MonthlyCap = require('./models/MonthlyCap');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.SERVER_PORT || 5000;
 
 // Middleware
 app.use(cors()); // Enable CORS for all routes - configure more strictly for production
