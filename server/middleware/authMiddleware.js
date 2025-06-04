@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-require('dotenv').config(); // Ensure JWT_SECRET is loaded
+require('dotenv').config();
 
 module.exports = function (req, res, next) {
   const authHeader = req.header('Authorization');
@@ -20,7 +20,7 @@ module.exports = function (req, res, next) {
       return res.status(500).json({ msg: 'Server configuration error: JWT secret missing' });
     }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = decoded.user.id; // Add userId from token payload to request object
+    req.userId = decoded.user.id;
     next();
   } catch (err) {
     console.error("Token verification failed in middleware:", err.message);
