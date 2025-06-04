@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
 import { Button, Stack, Container, Nav, Navbar, Form } from "react-bootstrap";
 
-// Components - Make sure these paths are correct
+// Components - Ensure these paths are correct
 import AddFixedMonthlyTotalModal from "./components/AddFixedMonthlyTotal";
 import AddBudgetModal from "./components/AddBudgetModal";
 import AddExpenseModal from "./components/AddExpenseModal";
@@ -162,7 +162,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/" element={ <ProtectedRoute> <BudgetAppContent /> </ProtectedRoute> } />
-            <Route path="*" element={ <Navigate to="/login" replace />} /> {/* Default to login if not authenticated and no other route matches */}
+            <Route path="*" element={ <Navigate to="/login" replace />} /> {/* Default to login if no auth or unknown route */}
           </Routes>
         </BudgetsProvider>
       </AuthProvider>
