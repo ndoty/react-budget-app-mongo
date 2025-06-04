@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }) => {
   const [internalLoading, setInternalLoading] = useState(true); 
 
   useEffect(() => {
+    console.log("AuthProvider: Mount & Initial Effect - Start");
     const storedToken = localStorage.getItem('token');
     const storedUserString = localStorage.getItem('currentUser');
     if (storedToken) {
@@ -44,6 +45,7 @@ export const AuthProvider = ({ children }) => {
       setCurrentUser(null); 
       delete axios.defaults.headers.common['Authorization']; 
     }
+    console.log("AuthProvider: Initial Effect - Setting internalLoading to false.");
     setInternalLoading(false); 
   }, []); 
 
@@ -115,9 +117,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   if (internalLoading) {
+    console.log("AuthProvider: RENDERING 'Initializing Authentication...' because internalLoading is TRUE.");
     return <Container className="my-4" style={{textAlign: 'center'}}><p>Initializing Authentication...</p></Container>;
   }
-
+  console.log("AuthProvider: RENDERING Provider with children because internalLoading is FALSE. Context value 'loading' will be:", contextValue.loading);
   return (
     <AuthContext.Provider value={contextValue}>
       {children}
