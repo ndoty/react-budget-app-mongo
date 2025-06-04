@@ -16,6 +16,12 @@ const MonthlyCap = require('./models/MonthlyCap');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Simple Test Route - place this VERY EARLY
+app.get('/ping', (req, res) => {
+  console.log("Server was PINGED at /ping");
+  res.status(200).send('pong');
+});
+
 // Standard Middleware
 app.use(cors()); // Enable CORS for all routes
 app.use(express.json()); // To parse JSON request bodies
