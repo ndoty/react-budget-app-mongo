@@ -1,16 +1,37 @@
 // server/index.js
-require('dotenv').config(); // Loads .env variables from server/.env
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require("mongoose");
 
-// --- Initialize Express App ---
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// --- Standard Middleware ---
-app.use(cors()); 
-app.use(express.json()); 
+// --- CORS Configuration ---
+const clientAppUrl = "https://budget.technickservices.com";
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    // Allow your specific frontend domain(s)
+    if ([clientAppUrl, "http://localhost:3000"].indexOf(origin) !== -1) { // Added localhost:3000 for dev
+      callback(null, true);
+    } else {
+      console.warn(`CORS: Blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  optionsSuccessStatus: 200 // For legacy browser compatibility
+};
+app.use(cors(corsOptions)); // Use configured CORS
+// If you prefer to keep it open during extended development/testing, you can revert to:
+// app.use(cors());
+
+app.use(express.json());
+
+// ... (rest of your server/index.js file: MongoDB connection, route mounting, error handlers, app.listen)
+// Ensure all other parts of server/index.js are the same as the last fully working version for curl tests.
 
 // --- MongoDB Connection ---
 const mongoUser = process.env.MONGO_USER;
@@ -35,27 +56,25 @@ app.get('/server-status', (req, res) => {
   res.status(200).send('Backend server is alive and the /server-status route is directly on the app object.');
 });
 
-// Mount authentication routes (from server/routes/auth.js)
 try {
     console.log("SERVER LOG: Attempting to require and mount ./routes/auth ...");
-    const authRoutes = require('./routes/auth'); // Path should be correct if auth.js is in routes/
-    app.use('/api/auth', authRoutes); 
+    const authRoutes = require('./routes/auth');
+    app.use('/api/auth', authRoutes);
     console.log("SERVER LOG: /api/auth routes *should* be mounted successfully.");
 } catch (e) {
     console.error("SERVER ERROR: CRITICAL - Failed to load or use ./routes/auth.js! Details:", e);
 }
 
-// --- Import other necessary files for data routes AFTER auth routes setup ---
-const authMiddleware = require('./middleware/authMiddleware'); // Ensure path is correct
-const Budget = require("./models/Budget"); // Ensure path is correct
-const Expense = require("./models/Expense"); // Ensure path is correct
-const MonthlyCap = require('./models/MonthlyCap'); // Ensure path is correct
+const authMiddleware = require('./middleware/authMiddleware');
+const Budget = require("./models/Budget");
+const Expense = require("./models/Expense");
+const MonthlyCap = require('./models/MonthlyCap');
 
-// --- Protected Data API Routes (Uncomment and use after auth is fully working) ---
 app.get("/api/budgets", authMiddleware, async (req, res) => {
   try { const budgets = await Budget.find({ userId: req.userId }); res.status(200).json(budgets); }
   catch (error) { console.error("GET /api/budgets Error:", error); res.status(500).json({ msg: "Server Error Fetching Budgets" }); }
 });
+// ... (Include all your other API routes for budgets, expenses, monthlyCap as defined previously) ...
 app.post("/api/budgets", authMiddleware, async (req, res) => {
   try { const { name, max, id: clientId } = req.body; if (name === undefined || max === undefined || clientId === undefined) { return res.status(400).json({ msg: "Missing required budget fields (id, name, max)."}); } const newBudget = new Budget({ name, max, id: clientId, userId: req.userId }); await newBudget.save(); res.status(201).json(newBudget); }
   catch (error) { console.error("POST /api/budgets Error:", error); res.status(500).json({ msg: "Server Error Creating Budget" }); }
@@ -109,6 +128,4 @@ app.listen(PORT, (err) => {
     return;
   }
   console.log(`SERVER LOG: Express server is listening on port ${PORT}`);
-  console.log(`SERVER LOG: Test basic server status with: curl http://localhost:${PORT}/server-status`);
-  console.log(`SERVER LOG: Test auth router GET with: curl http://localhost:${PORT}/api/auth/test-auth-route`);
 });
