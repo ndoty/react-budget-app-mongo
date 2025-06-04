@@ -1,8 +1,8 @@
-import React, { useState } from "react"; // useState is needed for LoginPage/RegisterPage
+import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
 import { Button, Stack, Container, Nav, Navbar, Form } from "react-bootstrap";
 
-// Components
+// Components - Make sure these paths are correct
 import AddFixedMonthlyTotalModal from "./components/AddFixedMonthlyTotal";
 import AddBudgetModal from "./components/AddBudgetModal";
 import AddExpenseModal from "./components/AddExpenseModal";
@@ -107,8 +107,8 @@ function BudgetAppContent() {
           <Navbar.Brand as={Link} to="/">Budget App</Navbar.Brand>
           {currentUser && <Navbar.Text className="ms-2">Signed in as: <strong>{currentUser.username}</strong></Navbar.Text>}
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
-          <Navbar.Collapse id="basic-navbar-nav">
-            <Nav className="ms-auto">
+          <Navbar.Collapse id="basic-navbar-nav" className="justify-content-end">
+            <Nav>
               {currentUser && <Button variant="outline-secondary" onClick={handleLogout}>Logout</Button>}
             </Nav>
           </Navbar.Collapse>
@@ -124,7 +124,6 @@ function BudgetAppContent() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
           { Array.isArray(budgets) && budgets.map((budget) => {
             const amount = getBudgetExpenses(budget.id).reduce((total, expense) => total + expense.amount, 0);
-            // Pass the client-generated budget.id for deletion/viewing operations
             return (<BudgetCard key={budget.id} budgetId={budget.id} name={budget.name} amount={amount} max={budget.max} onAddExpenseClick={() => openAddExpenseModal(budget.id)} onViewExpensesClick={() => setViewExpensesModalBudgetId(budget.id)} />);
           })}
           <UncategorizedBudgetCard onAddExpenseClick={() => openAddExpenseModal(UNCATEGORIZED_BUDGET_ID)} onViewExpensesClick={() => setViewExpensesModalBudgetId(UNCATEGORIZED_BUDGET_ID)} />
@@ -163,7 +162,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/" element={ <ProtectedRoute> <BudgetAppContent /> </ProtectedRoute> } />
-            <Route path="*" element={ <Navigate to={useAuth().isAuthenticated ? "/" : "/login"} replace />} />
+            <Route path="*" element={ <Navigate to="/login" replace />} /> {/* Default to login if not authenticated and no other route matches */}
           </Routes>
         </BudgetsProvider>
       </AuthProvider>
