@@ -7,85 +7,96 @@ const mongoose = require("mongoose");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// --- CORS Configuration ---
-const allowedOrigins = [
-  "https://budget.technickservices.com", // Your frontend production URL
-  "http://budget.technickservices.com",  // If you also support HTTP for frontend (less common with HTTPS API)
-  "http://localhost:3000"               // For local client development (if you still use it)
-];
+// --- EXTREMELY PERMISSIVE CORS FOR DEBUGGING ---
+// This will allow all origins, all methods, all headers.
+// If this works, the issue is definitely with the specificity of your previous corsOptions.
+console.log("SERVER LOG: USING TEMPORARY PERMISSIVE CORS FOR DEBUGGING!");
+app.use(cors({
+    origin: '*', // Allow all origins
+    methods: '*', // Allow all methods
+    allowedHeaders: '*', // Allow all headers
+    credentials: true, // If needed
+    optionsSuccessStatus: 204
+}));
+// The above app.use(cors({...})) should handle OPTIONS requests automatically.
+// So, app.options('*', cors(corsOptions)); might not be strictly necessary when origin is '*'.
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    // OR if origin is in allowedOrigins list
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.warn(`CORS: Blocked request from origin: ${origin} because it's not in allowedOrigins.`);
-      callback(new Error(`Origin ${origin} not allowed by CORS`));
-    }
-  },
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE", // Explicitly list allowed methods
-  allowedHeaders: "Content-Type, Authorization, X-Requested-With", // Explicitly list allowed headers
-  credentials: true, // If you were using cookies/sessions (not strictly needed for JWT via Bearer token but good practice)
-  optionsSuccessStatus: 204 // For preflight OPTIONS requests, respond with 204 No Content
-};
-
-// Use a global OPTIONS handler for preflight requests BEFORE your cors(corsOptions)
-// This ensures OPTIONS requests get a quick 204 with CORS headers.
-app.options('*', cors(corsOptions)); // Enable pre-flight across-the-board
-
-app.use(cors(corsOptions)); // Apply your configured CORS options to all routes
-
-app.use(express.json()); // To parse JSON request bodies
+app.use(express.json()); 
 
 // --- MongoDB Connection ---
+// ... (same as your previous version)
 const mongoUser = process.env.MONGO_USER;
 const mongoPass = process.env.MONGO_PASS;
-const mongoConnectionString = process.env.MONGO_URI || `mongodb://<span class="math-inline">\{mongoUser\}\:</span>{mongoPass}@technickservices.com/React-Budget-App?authSource=admin`;
-
-console.log(`SERVER LOG: Attempting to connect to MongoDB at: ${mongoConnectionString.replace(mongoPass, "****")}`);
-mongoose.connect(mongoConnectionString, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+const mongoConnectionString = process.env.MONGO_URI || `mongodb://${mongoUser}:${mongoPass}@technickservices.com/React-Budget-App?authSource=admin`;
+mongoose.connect(mongoConnectionString, { useNewUrlParser: true, useUnifiedTopology: true })
 .then(() => console.log('SERVER LOG: MongoDB Connected Successfully!'))
-.catch(err => {
-    console.error('SERVER ERROR: MongoDB Connection Failed! Details:', err.message);
-});
+.catch(err => console.error('SERVER ERROR: MongoDB Connection Failed! Details:', err.message));
+
 
 // --- ROUTES ---
+// ... (same as your previous version: /server-status, authRoutes, data routes)
 console.log("SERVER LOG: Registering routes...");
-const authRoutes = require('./routes/auth'); // Assuming path is correct
-const authMiddleware = require('./middleware/authMiddleware'); // Assuming path is correct
+const authRoutes = require('./routes/auth'); 
+const authMiddleware = require('./middleware/authMiddleware'); 
 const Budget = require("./models/Budget");
 const Expense = require("./models/Expense");
 const MonthlyCap = require('./models/MonthlyCap');
 
+app.get('/server-status', (req, res) => res.status(200).send('Backend server (budget-api) is alive.'));
+app.use('/api/auth', authRoutes);
 
-app.get('/server-status', (req, res) => {
-  console.log(`SERVER LOG: GET /server-status route hit at ${new Date().toISOString()}`);
-  res.status(200).send('Backend server (budget-api) is alive.');
-});
-
-try {
-    console.log("SERVER LOG: Attempting to require and mount ./routes/auth ...");
-    app.use('/api/auth', authRoutes);
-    console.log("SERVER LOG: /api/auth routes *should* be mounted successfully.");
-} catch (e) {
-    console.error("SERVER ERROR: CRITICAL - Failed to load or use ./routes/auth.js! Details:", e);
-}
-
-// --- Protected Data API Routes ---
-// (These should be the same as the last full backend server/index.js version
-// where curl tests for your API were working. I'll include one as an example)
 app.get("/api/budgets", authMiddleware, async (req, res) => {
-  console.log(`SERVER LOG: GET /api/budgets for userId: ${req.userId}`);
-  try {
-    const budgets = await Budget.find({ userId: req.userId });
-    console.log(`SERVER LOG: Found ${budgets.length} budgets for userId: ${req.userId}`);
-    res.status(200).json(budgets);
-  } catch (error) { console.error("GET /api/budgets Error:", error); res.status(500).json({ msg: "Server Error Fetching Budgets" }); }
+  try { const budgets = await Budget.find({ userId: req.userId }); res.status(200).json(budgets); }
+  catch (error) { console.error("GET /api/budgets Error:", error); res.status(500).json({ msg: "Server Error Fetching Budgets" }); }
 });
-// ... (Include all your other API routes for budgets, expenses, monthlyCap)
+// ... (Include all your other API routes for budgets, expenses, monthlyCap as previously defined)
 app.post("/api/budgets", authMiddleware, async (req, res) => {
+  try { const { name, max, id: clientId } = req.body; if (name === undefined || max === undefined || clientId === undefined) { return res.status(400).json({ msg: "Missing required budget fields (id, name, max)."}); } const newBudget = new Budget({ name, max, id: clientId, userId: req.userId }); await newBudget.save(); res.status(201).json(newBudget); }
+  catch (error) { console.error("POST /api/budgets Error:", error); res.status(500).json({ msg: "Server Error Creating Budget" }); }
+});
+app.delete("/api/budgets/:clientId", authMiddleware, async (req, res) => {
+    try { const budget = await Budget.findOneAndDelete({ id: req.params.clientId, userId: req.userId }); if (!budget) { return res.status(404).json({ msg: "Budget not found or user not authorized" }); } await Expense.updateMany( { userId: req.userId, budgetId: req.params.clientId }, { $set: { budgetId: "Uncategorized" } } ); res.json({ msg: "Budget removed" }); }
+    catch (error) { console.error("DELETE /api/budgets/:clientId Error:", error.message); res.status(500).json({ msg: "Server Error Deleting Budget" }); }
+});
+app.get("/api/expenses", authMiddleware, async (req, res) => {
+  try { const expenses = await Expense.find({ userId: req.userId }); res.status(200).json(expenses); }
+  catch (error) { console.error("GET /api/expenses Error:", error); res.status(500).json({ msg: "Server Error Fetching Expenses" }); }
+});
+app.post("/api/expenses", authMiddleware, async (req, res) => {
+  try { const { description, amount, budgetId, id: clientId } = req.body; if (description === undefined || amount === undefined || budgetId === undefined || clientId === undefined) { return res.status(400).json({ msg: "Missing required expense fields."}); } const newExpense = new Expense({ description, amount, budgetId, id: clientId, userId: req.userId }); await newExpense.save(); res.status(201).json(newExpense); }
+  catch (error) { console.error("POST /api/expenses Error:", error); res.status(500).json({ msg: "Server Error Creating Expense" }); }
+});
+app.delete("/api/expenses/:clientId", authMiddleware, async (req, res) => {
+    try { const expense = await Expense.findOneAndDelete({ id: req.params.clientId, userId: req.userId }); if (!expense) { return res.status(404).json({ msg: "Expense not found or user not authorized" }); } res.json({ msg: "Expense removed" }); }
+    catch (error) { console.error("DELETE /api/expenses/:clientId Error:", error.message); res.status(500).json({ msg: "Server Error Deleting Expense" }); }
+});
+app.get("/api/monthlyCap", authMiddleware, async (req, res) => {
+  try { const capDoc = await MonthlyCap.findOne({ userId: req.userId }); res.status(200).json(capDoc ? [capDoc] : []); }
+  catch (error) { console.error("GET /api/monthlyCap Error:", error); res.status(500).json({ msg: "Server Error Fetching Monthly Cap" }); }
+});
+app.post("/api/monthlyCap", authMiddleware, async (req, res) => {
+  try { const { cap } = req.body; await MonthlyCap.findOneAndDelete({ userId: req.userId }); if (cap !== undefined && cap !== null && !isNaN(parseFloat(cap)) && parseFloat(cap) > 0) { const newCap = new MonthlyCap({ userId: req.userId, cap: parseFloat(cap) }); await newCap.save(); res.status(200).json([newCap]); } else { res.status(200).json([]); } }
+  catch (error) { console.error("POST /api/monthlyCap Error:", error); res.status(500).json({ msg: "Server Error Setting Monthly Cap" }); }
+});
+
+
+// --- 404 Handlers and Error Handler ---
+// ... (same as your previous version)
+app.use('/api/*', (req, res) => {
+    console.log(`SERVER LOG: API 404. No handler for API route: ${req.method} ${req.originalUrl}`);
+    res.status(404).json({ msg: `API endpoint not found: ${req.method} ${req.originalUrl}` });
+});
+app.use('*', (req, res) => {
+  console.log(`SERVER LOG: General 404. Unhandled route: ${req.method} ${req.originalUrl}`);
+  res.status(404).send(`Cannot ${req.method} ${req.originalUrl}. Resource not found on this server (budget-api).`);
+});
+app.use((err, req, res, next) => {
+  console.error("SERVER ERROR: Unhandled application error:", err.stack);
+  res.status(500).json({ msg: 'Internal Server Error. Something broke!' });
+});
+
+// --- Start Server ---
+app.listen(PORT, (err) => {
+  if (err) { console.error(`SERVER ERROR: Failed to start express server on port ${PORT}:`, err); return; }
+  console.log(`SERVER LOG: Express server (budget-api) is listening on port ${PORT}`);
+});
