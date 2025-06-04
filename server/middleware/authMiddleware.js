@@ -42,4 +42,11 @@ module.exports = function (req, res, next) {
     }
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decoded.user.id;
-    console
+    console.log(`SERVER authMiddleware: Token VERIFIED successfully. userId: ${req.userId}. Proceeding to next middleware/handler.`);
+    next();
+  } catch (err) {
+    console.error("SERVER authMiddleware: Token verification FAILED:", err.name, "-", err.message);
+    res.status(401).json({ msg: 'Token is not valid or expired', error: err.name });
+  }
+  console.log(`--- END SERVER authMiddleware ---`);
+};
