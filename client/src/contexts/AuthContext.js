@@ -1,17 +1,19 @@
+// client/src/contexts/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container } from "react-bootstrap"; 
 
-const API_URL = process.env.REACT_APP_API_URL || "/api";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api"; 
+console.log("CLIENT AuthContext: API_URL is set to:", API_URL); // Log this for verification
 
 const defaultAuthContextValue = {
   token: null,
   currentUser: null,
   isAuthenticated: false,
   loading: true, 
-  login: async () => { console.error("Login function not ready"); return { success: false, message: 'Auth not ready' }; },
-  register: async () => { console.error("Register function not ready"); return { success: false, message: 'Auth not ready' }; },
-  logout: () => { console.error("Logout function not ready"); },
+  login: async () => { return { success: false, message: 'Auth not ready' }; },
+  register: async () => { return { success: false, message: 'Auth not ready' }; },
+  logout: () => {},
 };
 
 const AuthContext = createContext(defaultAuthContextValue);
@@ -26,26 +28,18 @@ export const AuthProvider = ({ children }) => {
   const [internalLoading, setInternalLoading] = useState(true); 
 
   useEffect(() => {
-    console.log("AuthProvider: Mount & Initial Effect - Start");
     const storedToken = localStorage.getItem('token');
     const storedUserString = localStorage.getItem('currentUser');
     if (storedToken) {
       setToken(storedToken); 
       if (storedUserString) {
-        try {
-          setCurrentUser(JSON.parse(storedUserString));
-        } catch (e) {
-          localStorage.removeItem('currentUser');
-          setCurrentUser(null);
-        }
-      } else {
-        setCurrentUser(null);
-      }
+        try { setCurrentUser(JSON.parse(storedUserString)); } 
+        catch (e) { localStorage.removeItem('currentUser'); setCurrentUser(null); }
+      } else { setCurrentUser(null); }
     } else {
       setCurrentUser(null); 
       delete axios.defaults.headers.common['Authorization']; 
     }
-    console.log("AuthProvider: Initial Effect - Setting internalLoading to false.");
     setInternalLoading(false); 
   }, []); 
 
@@ -58,8 +52,10 @@ export const AuthProvider = ({ children }) => {
   }, [token]); 
 
   const login = async (username, password) => {
+    const targetUrl = `${API_URL}/auth/login`;
+    console.log(`CLIENT: Attempting to POST to LOGIN: ${targetUrl}`);
     try {
-      const res = await axios.post(`${API_URL}/auth/login`, { username, password });
+      const res = await axios.post(targetUrl, { username, password });
       localStorage.setItem('token', res.data.token);
       const userData = { id: res.data.userId, username: res.data.username };
       localStorage.setItem('currentUser', JSON.stringify(userData));
@@ -67,33 +63,34 @@ export const AuthProvider = ({ children }) => {
       setCurrentUser(userData);
       return { success: true };
     } catch (error) {
-      console.error("Login error:", error.response ? error.response.data : error.message);
-      return { success: false, message: error.response?.data?.msg || 'Login failed. Check credentials or server status.' };
+      console.error("CLIENT: Login error - Status:", error.response?.status, "Data:", error.response?.data, "Message:", error.message, "Request to:", targetUrl);
+      return { success: false, message: error.response?.data?.msg || `Login failed: ${error.message}` };
     }
   };
 
   const register = async (username, password) => {
-    console.log(`Attempting registration for ${username} at ${API_URL}/auth/register`);
+    const targetUrl = `${API_URL}/auth/register`;
+    console.log(`CLIENT: Attempting to POST to REGISTER: ${targetUrl} with username: ${username}`);
     try {
-      const response = await axios.post(`${API_URL}/auth/register`, { username, password });
+      const response = await axios.post(targetUrl, { username, password });
        if (response.status === 201 || response.status === 200) {
-        console.log("Registration API call successful:", response.data);
+        console.log("CLIENT: Registration API call successful:", response.data);
         return { success: true };
       } else {
-        console.warn("Registration API call returned non-2xx status:", response.status, response.data);
+        console.warn("CLIENT: Registration API call returned non-2xx status:", response.status, response.data);
         return { success: false, message: response.data?.msg || `Registration failed with status ${response.status}` };
       }
     } catch (error) {
       let message = 'Registration failed. Please try again.';
-      if (error.response) {
-        console.error("Registration API error (client):", error.response.data, "Status:", error.response.status);
+      if (error.response) { // Server responded with an error status
+        console.error("CLIENT: Registration API error - Status:", error.response.status, "Data:", error.response.data, "Request to:", targetUrl);
         message = error.response.data.msg || `Server error: ${error.response.status}`;
-      } else if (error.request) {
-        console.error("Registration network error (client): No response received.", error.request);
-        message = 'Network error or server is not responding. Ensure backend is running and API_URL is correct.';
-      } else {
-        console.error('Registration setup error (client):', error.message);
-        message = `Client-side error: ${error.message}`;
+      } else if (error.request) { // Request made but no response received
+        console.error("CLIENT: Registration network error - No response received. Request to:", targetUrl, "Error details:", error.request);
+        message = `Network error or server is not responding at ${targetUrl}. Ensure backend is running.`;
+      } else { // Error in setting up the request
+        console.error('CLIENT: Registration setup error - Error message:', error.message, "Request to:", targetUrl);
+        message = `Client-side error before sending request: ${error.message}`;
       }
       return { success: false, message };
     }
@@ -117,10 +114,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   if (internalLoading) {
-    console.log("AuthProvider: RENDERING 'Initializing Authentication...' because internalLoading is TRUE.");
     return <Container className="my-4" style={{textAlign: 'center'}}><p>Initializing Authentication...</p></Container>;
   }
-  console.log("AuthProvider: RENDERING Provider with children because internalLoading is FALSE. Context value 'loading' will be:", contextValue.loading);
+
   return (
     <AuthContext.Provider value={contextValue}>
       {children}
