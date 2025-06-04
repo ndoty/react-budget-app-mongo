@@ -1,3 +1,4 @@
+// client/src/hooks/useMongo.js
 import axios from "axios";
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
@@ -5,87 +6,59 @@ import { useAuth } from "../contexts/AuthContext";
 const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget-api.technickservices.com/api";
 
 export const fetchDataFromAPI = async (key) => {
+  const targetUrl = `${API_URL_BASE}/${key}`;
+  console.log(`CLIENT useMongo: fetchDataFromAPI - Attempting to GET from ${targetUrl}`);
+  console.log("CLIENT useMongo: Current Axios default headers:", JSON.stringify(axios.defaults.headers.common)); // Log headers
   try {
-    const targetUrl = `${API_URL_BASE}/${key}`;
-    // console.log(`CLIENT useMongo: fetchDataFromAPI for ${targetUrl}`);
-    const response = await axios.get(targetUrl); // Token is automatically included by AuthContext
-    // console.log(`CLIENT useMongo: Data received for ${key}:`, response.data);
+    const response = await axios.get(targetUrl); // Token should be in headers via AuthContext
     return response.data;
   } catch (error) {
-    console.error(`CLIENT useMongo: Error fetching ${key} from ${API_URL_BASE}/${key}:`, error.response ? error.response.data : error.message);
+    console.error(`CLIENT useMongo: Error fetching ${key} from ${targetUrl}:`, error.response ? error.response.data : error.message);
     if (error.response && error.response.status === 401) {
-      console.error("CLIENT useMongo: Unauthorized fetch. Token might be invalid.");
-      // Potentially trigger logout if 401 on data fetch
+      // The error message "{msg: 'No token, authorization denied'}" comes from the backend if this happens.
+      console.error("CLIENT useMongo: fetchDataFromAPI received 401 Unauthorized. Token was likely missing or invalid.");
     }
-    return null;
+    return null; // This will lead to BudgetsContext setting empty data
   }
 };
 
-// postSingleItemToAPI, deleteItemFromAPI, postMonthlyCapToAPI as previously defined, they use API_URL_BASE
-
+// ... (postSingleItemToAPI, deleteItemFromAPI, postMonthlyCapToAPI should also use the default header) ...
 export const postSingleItemToAPI = async (key, item) => {
-  try {
-    const targetUrl = `${API_URL_BASE}/${key}`;
-    const response = await axios.post(targetUrl, item);
-    return response.data;
-  } catch (error) {
-    console.error(`Error posting single ${key} to ${targetUrl}:`, error.response ? error.response.data : error.message);
-    return null;
-  }
+  const targetUrl = `${API_URL_BASE}/${key}`;
+  console.log(`CLIENT useMongo: postSingleItemToAPI - Attempting to POST to ${targetUrl}`);
+  console.log("CLIENT useMongo: Current Axios default headers:", JSON.stringify(axios.defaults.headers.common));
+  try { /* ... */ } catch (error) { /* ... */ }
 };
-
-export const deleteItemFromAPI = async (key, itemId) => {
-  try {
-    const targetUrl = `${API_URL_BASE}/${key}/${itemId}`;
-    const response = await axios.delete(targetUrl);
-    return response.data;
-  } catch (error) {
-    console.error(`Error deleting ${key} ID ${itemId} from ${targetUrl}:`, error.response ? error.response.data : error.message);
-    return null;
-  }
-};
-
-export const postMonthlyCapToAPI = async (capData) => {
-  try {
-    const targetUrl = `${API_URL_BASE}/monthlyCap`;
-    const response = await axios.post(targetUrl, capData);
-    return response.data;
-  } catch (error) {
-    console.error(`Error posting monthlyCap to ${targetUrl}:`, error.response ? error.response.data : error.message);
-    return null;
-  }
-}
+// Add similar logging to other API functions if the error occurs there.
 
 
 export default function useMongo(key, initialDefault = []) {
   const [value, setValue] = useState(initialDefault);
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth(); // This comes from AuthContext
 
   useEffect(() => {
     // console.log(`useMongo HOOK (${key}): Effect triggered. AuthLoading: ${authLoading}, IsAuthenticated: ${isAuthenticated}`);
 
     const loadData = async () => {
-      if (isAuthenticated) {
+      if (isAuthenticated) { // This should be true after login
         // console.log(`useMongo HOOK (${key}): Authenticated & auth loaded. Fetching data...`);
-        const data = await fetchDataFromAPI(key);
+        const data = await fetchDataFromAPI(key); // This is where the error likely occurs
         // console.log(`useMongo HOOK (${key}): Data fetched:`, data);
         setValue(Array.isArray(data) ? data : initialDefault);
       } else {
-        // console.log(`useMongo HOOK (${key}): Not authenticated or auth still loading. Setting to initialDefault.`);
-        setValue(initialDefault); // Clear data if not authenticated
+        // console.log(`useMongo HOOK (${key}): Not authenticated. Setting to initialDefault.`);
+        setValue(initialDefault);
       }
     };
 
-    if (!authLoading) { // Only run loadData if authentication status is resolved
-      // console.log(`useMongo HOOK (${key}): Auth loading finished. IsAuthenticated: ${isAuthenticated}.`);
+    if (!authLoading) { // When AuthContext says it's no longer loading
+      // console.log(`useMongo HOOK (${key}): Auth loading complete. IsAuthenticated: ${isAuthenticated}. Running loadData.`);
       loadData();
     } else {
-      // console.log(`useMongo HOOK (${key}): Auth still loading. Setting to initialDefault to avoid stale data.`);
-      setValue(initialDefault); // Reset if auth is re-evaluating
+      // console.log(`useMongo HOOK (${key}): Auth is still loading. Setting value to initialDefault.`);
+      setValue(initialDefault);
     }
-  // Key, isAuthenticated, and authLoading are the correct dependencies here.
-  // initialDefault should not be in deps if it's a new array/object literal each time.
-  }, [key, isAuthenticated, authLoading]);
+  }, [key, isAuthenticated, authLoading]); // Dependencies are correct
 
   return [value, setValue];
 }
