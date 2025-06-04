@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 app.use(cors()); // Configure CORS appropriately for production
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.SERVER_PORT || 5000;
 const user = process.env.MONGO_USER;
 const pass = process.env.MONGO_PASS;
 
