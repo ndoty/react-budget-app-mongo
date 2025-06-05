@@ -8,9 +8,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install dependencies
-RUN echo "---- [Server Dockerfile] Running npm install ----" && \
-    npm install --legacy-peer-deps && \
-    echo "---- [Server Dockerfile] npm install complete ----"
+RUN npm install --legacy-peer-deps
 
 # Copy the rest of your server application code
 COPY . .
