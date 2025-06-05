@@ -1,7 +1,7 @@
 # react-budget-app-mongo-main/client/Dockerfile
 
 # --- Development Stage ---
-FROM node:18-alpine AS development # Naming the stage is still good practice
+FROM node:18-alpine
 
 # Set environment to development - this is often set by react-scripts start anyway
 ENV NODE_ENV development
