@@ -1,19 +1,23 @@
-FROM node:18-alpine AS development
-
-ENV NODE_ENV development
+# react-budget-app-mongo-main/server/Dockerfile
+FROM node:18-alpine
 
 WORKDIR /usr/src/app
 
+# Copy package.json and package-lock.json (or yarn.lock) first
+# to leverage Docker's build cache.
 COPY package*.json ./
 
-RUN npm install --legacy-peer-deps
+# Install dependencies
+RUN echo "---- [Server Dockerfile] Running npm install ----" && \
+    npm install --legacy-peer-deps && \
+    echo "---- [Server Dockerfile] npm install complete ----"
 
-COPY .env.development /usr/src/app/.env # This line was in your original; ensure .env.development has correct vars if used
-# If you are using a single .env file mounted via docker-compose, this line might be redundant or copy an unintended file.
-# For CRA, it typically looks for .env, .env.development, etc.
-
+# Copy the rest of your server application code
 COPY . .
 
-# EXPOSE 3000 # PORT is usually set by react-scripts or via environment variable in docker-compose
+# The PORT environment variable will be set by docker-compose.
+# Your server/index.js should use process.env.PORT.
+# EXPOSE is for documentation; docker-compose 'ports' handles the actual mapping.
+# Example: EXPOSE 5000 (if your server typically runs on 5000 internally)
 
-CMD ["npm", "start"]
+CMD [ "node", "index.js" ]
