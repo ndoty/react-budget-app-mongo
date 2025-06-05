@@ -1,9 +1,9 @@
 // client/src/App.js
-import React, { useState, useEffect } from "react";
+import React, { useState, /*useEffect no longer needed here for WS */ } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
 import { Button, Stack, Container, Nav, Navbar, Form } from "react-bootstrap";
 
-// Components - Ensure these paths are correct
+// Components
 import AddFixedMonthlyTotalModal from "./components/AddFixedMonthlyTotal";
 import AddBudgetModal from "./components/AddBudgetModal";
 import AddExpenseModal from "./components/AddExpenseModal";
@@ -90,7 +90,7 @@ function BudgetAppContent() {
   const [addExpenseModalBudgetId, setAddExpenseModalBudgetId] = useState();
   const [showFixedMonthlyTotalModal, setShowFixedMonthlyTotalModal] = useState(false);
 
-  const { budgets, getBudgetExpenses } = useBudgets();
+  const { budgets, getBudgetExpenses } = useBudgets(); // useBudgets still used here
   const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
 
@@ -155,88 +155,11 @@ function ProtectedRoute({ children }) {
 
 // --- Main App Component ---
 function App() {
-  // ---- START WebSocket Client MODIFIED ----
-  useEffect(() => {
-    const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-    let wsHost;
-
-    // Use REACT_APP_API_URL to derive the WebSocket host
-    // This variable should be set during your build process for production
-    const apiUrl = process.env.REACT_APP_API_URL;
-
-    if (apiUrl && apiUrl.startsWith('http')) { // Check if apiUrl is a valid URL
-      try {
-        const urlObject = new URL(apiUrl);
-        // For production, use the hostname from REACT_APP_API_URL (e.g., budget-api.technickservices.com)
-        // For local, if REACT_APP_API_URL is like http://localhost:5000/api, use localhost:5000
-        wsHost = urlObject.host; // This will include hostname:port if port is non-standard
-        if (urlObject.protocol === 'http:' && wsProtocol === 'wss:') {
-            // If API is http but site is https (local dev with proxy), adjust ws protocol if needed,
-            // but usually you'd connect to the proxy's protocol for WebSockets too.
-            // For simplicity here, we rely on wsProtocol derived from window.location.
-        }
-      } catch (e) {
-        console.error("CLIENT WebSocket: Invalid REACT_APP_API_URL, falling back to default.", e);
-        // Fallback for local development if REACT_APP_API_URL is not set or invalid
-        wsHost = `localhost:${process.env.REACT_APP_SERVER_PORT || 5000}`;
-      }
-    } else if (process.env.NODE_ENV === 'production') {
-        // Fallback for production if REACT_APP_API_URL is not available/valid
-        wsHost = 'budget-api.technickservices.com';
-        console.warn("CLIENT WebSocket: REACT_APP_API_URL not found or invalid, using default production host 'budget-api.technickservices.com'.");
-    }
-    else {
-      // Fallback for local development
-      wsHost = `localhost:${process.env.REACT_APP_SERVER_PORT || 5000}`;
-      console.warn(`CLIENT WebSocket: REACT_APP_API_URL not found or invalid, using default development host '${wsHost}'.`);
-    }
-
-    const wsUrl = `${wsProtocol}${wsHost}/ws`;
-
-    console.log(`CLIENT WebSocket: Attempting to connect to ${wsUrl}`); // Line 179 (approx)
-    let socket;
-
-    try {
-      socket = new WebSocket(wsUrl);
-
-      socket.onopen = () => {
-        console.log("CLIENT WebSocket: Connected to server");
-        socket.send("Hello Server from React Client!");
-      };
-
-      socket.onmessage = (event) => {
-        console.log(`CLIENT WebSocket: Message from server: `, event.data);
-      };
-
-      socket.onerror = (error) => {
-        console.error("CLIENT WebSocket: Connection Error Event:", error);
-      };
-
-      socket.onclose = (event) => {
-        if (event.wasClean) {
-          console.log(`CLIENT WebSocket: Connection closed cleanly, code=${event.code} reason=${event.reason}`);
-        } else {
-          console.error(`CLIENT WebSocket: Connection died. Code: ${event.code}, Reason: "${event.reason}"`);
-        }
-      };
-    } catch (error) {
-      console.error("CLIENT WebSocket: Error initializing WebSocket:", error);
-      return;
-    }
-
-    return () => {
-      if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
-        console.log("CLIENT WebSocket: Closing connection on component unmount");
-        socket.close(1000, "Client unmounting");
-      }
-    };
-  }, []);
-  // ---- END WebSocket Client MODIFIED ----
-
+  // WebSocket connection for budget data is now handled within BudgetsContext
   return (
     <Router>
       <AuthProvider>
-        <BudgetsProvider>
+        <BudgetsProvider> {/* BudgetsProvider will establish its own WebSocket connection */}
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
