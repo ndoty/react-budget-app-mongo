@@ -57,10 +57,9 @@ const mongoPass = process.env.MONGO_PASS;
 const mongoConnectionString = process.env.MONGO_URI || `mongodb://${mongoUser}:${mongoPass}@technickservices.com/React-Budget-App?authSource=admin`;
 
 console.log(`SERVER LOG: Attempting to connect to MongoDB at: ${mongoConnectionString.replace(mongoPass || "YOUR_DB_PASS", "****")}`);
-mongoose.connect(mongoConnectionString, { useNewUrlParser: true, useUnifiedTopology: true })
-.then(() => console.log('SERVER LOG: MongoDB Connected Successfully!'))
-.catch(err => console.error('SERVER ERROR: MongoDB Connection Failed! Details:', err.message));
-
+mongoose.connect(mongoConnectionString)
+  .then(() => console.log('SERVER LOG: MongoDB Connected Successfully!'))
+  .catch(err => console.error('SERVER ERROR: MongoDB Connection Failed! Details:', err.message));
 // --- ROUTES ---
 console.log("SERVER LOG: Registering routes...");
 // Ensure paths to these files are correct relative to server/index.js
