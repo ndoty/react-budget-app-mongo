@@ -1,5 +1,5 @@
 // client/src/App.js
-import React, { useState, useEffect } from "react"; // Added useEffect
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
 import { Button, Stack, Container, Nav, Navbar, Form } from "react-bootstrap";
 
@@ -155,24 +155,45 @@ function ProtectedRoute({ children }) {
 
 // --- Main App Component ---
 function App() {
-  // ---- START WebSocket Client Example ----
+  // ---- START WebSocket Client MODIFIED ----
   useEffect(() => {
-    // This effect should ideally run only when the user is authenticated
-    // and you actually want to establish a WebSocket connection.
-    // For now, it runs when App mounts.
-    
     const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-    
-    // For production, ensure your reverse proxy (Nginx) is configured for wss on budget-api.technickservices.com/ws
-    // For local development, this assumes your backend server (with WebSockets) runs on port 5000.
-    // Adjust the port if your local SERVER_PORT is different.
-    const serverPort = process.env.REACT_APP_SERVER_PORT || 5000; // Example, ensure this matches your local backend port
-    const wsHost = process.env.NODE_ENV === 'production' 
-                   ? 'budget-api.technickservices.com' 
-                   : `localhost:${serverPort}`;
+    let wsHost;
+
+    // Use REACT_APP_API_URL to derive the WebSocket host
+    // This variable should be set during your build process for production
+    const apiUrl = process.env.REACT_APP_API_URL;
+
+    if (apiUrl && apiUrl.startsWith('http')) { // Check if apiUrl is a valid URL
+      try {
+        const urlObject = new URL(apiUrl);
+        // For production, use the hostname from REACT_APP_API_URL (e.g., budget-api.technickservices.com)
+        // For local, if REACT_APP_API_URL is like http://localhost:5000/api, use localhost:5000
+        wsHost = urlObject.host; // This will include hostname:port if port is non-standard
+        if (urlObject.protocol === 'http:' && wsProtocol === 'wss:') {
+            // If API is http but site is https (local dev with proxy), adjust ws protocol if needed,
+            // but usually you'd connect to the proxy's protocol for WebSockets too.
+            // For simplicity here, we rely on wsProtocol derived from window.location.
+        }
+      } catch (e) {
+        console.error("CLIENT WebSocket: Invalid REACT_APP_API_URL, falling back to default.", e);
+        // Fallback for local development if REACT_APP_API_URL is not set or invalid
+        wsHost = `localhost:${process.env.REACT_APP_SERVER_PORT || 5000}`;
+      }
+    } else if (process.env.NODE_ENV === 'production') {
+        // Fallback for production if REACT_APP_API_URL is not available/valid
+        wsHost = 'budget-api.technickservices.com';
+        console.warn("CLIENT WebSocket: REACT_APP_API_URL not found or invalid, using default production host 'budget-api.technickservices.com'.");
+    }
+    else {
+      // Fallback for local development
+      wsHost = `localhost:${process.env.REACT_APP_SERVER_PORT || 5000}`;
+      console.warn(`CLIENT WebSocket: REACT_APP_API_URL not found or invalid, using default development host '${wsHost}'.`);
+    }
+
     const wsUrl = `${wsProtocol}${wsHost}/ws`;
 
-    console.log(`CLIENT WebSocket: Attempting to connect to ${wsUrl}`);
+    console.log(`CLIENT WebSocket: Attempting to connect to ${wsUrl}`); // Line 179 (approx)
     let socket;
 
     try {
@@ -188,9 +209,6 @@ function App() {
       };
 
       socket.onerror = (error) => {
-        // The error object itself in WebSocket 'onerror' is often a generic Event.
-        // More detailed errors usually appear in the console *before* this,
-        // like the "WebSocket connection to ... failed" message.
         console.error("CLIENT WebSocket: Connection Error Event:", error);
       };
 
@@ -203,20 +221,17 @@ function App() {
       };
     } catch (error) {
       console.error("CLIENT WebSocket: Error initializing WebSocket:", error);
-      return; // Don't proceed to cleanup if socket was never initialized
+      return;
     }
 
-
-    // Cleanup on component unmount
     return () => {
       if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
         console.log("CLIENT WebSocket: Closing connection on component unmount");
-        socket.close(1000, "Client unmounting"); // Close with a normal status code
+        socket.close(1000, "Client unmounting");
       }
     };
-  }, []); // Empty dependency array means this runs once when App mounts and cleans up on unmount.
-          // You might want to add dependencies if the connection depends on auth state, etc.
-  // ---- END WebSocket Client Example ----
+  }, []);
+  // ---- END WebSocket Client MODIFIED ----
 
   return (
     <Router>
