@@ -5,7 +5,7 @@ const cors = require('cors');
 const mongoose = require("mongoose");
 
 const app = express();
-const PORT = process.env.SERVER_PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
 // --- CORS Configuration ---
 const allowedOrigins = [
@@ -38,7 +38,7 @@ app.use(express.json());
 // --- MongoDB Connection ---
 const mongoUser = process.env.MONGO_USER;
 const mongoPass = process.env.MONGO_PASS;
-const mongoConnectionString = process.env.MONGO_URI || `mongodb://<span class="math-inline">\{mongoUser\}\:</span>{mongoPass}@technickservices.com/React-Budget-App?authSource=admin`;
+const mongoConnectionString = process.env.MONGO_URI || `mongodb://${mongoUser}:${mongoPass}@technickservices.com/React-Budget-App?authSource=admin`;
 
 console.log(`SERVER LOG: Attempting to connect to MongoDB at: ${mongoConnectionString.replace(mongoPass || "YOUR_DB_PASS", "****")}`);
 mongoose.connect(mongoConnectionString, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -75,4 +75,28 @@ app.get("/api/expenses", authMiddleware, async (req, res) => {
   catch (error) { console.error("GET /api/expenses Error:", error); res.status(500).json({ msg: "Server Error Fetching Expenses" }); }
 });
 app.post("/api/expenses", authMiddleware, async (req, res) => {
-  try { const { description, amount, budgetId, id: clientId } = req.body; if (!description||amount===undefined||!budgetId||!clientId) { return res.status(
+  try { const { description, amount, budgetId, id: clientId } = req.body; if (!description||amount===undefined||!budgetId||!clientId) { return res.status(400).json({ msg: "Missing expense fields"}); } const newExpense = new Expense({ description, amount, budgetId, id: clientId, userId: req.userId }); await newExpense.save(); res.status(201).json(newExpense); }
+  catch (error) { console.error("POST /api/expenses Error:", error); res.status(500).json({ msg: "Server Error Creating Expense" }); }
+});
+app.delete("/api/expenses/:clientId", authMiddleware, async (req, res) => {
+    try { const expense = await Expense.findOneAndDelete({ id: req.params.clientId, userId: req.userId }); if (!expense) { return res.status(404).json({ msg: "Expense not found" }); } res.json({ msg: "Expense removed" }); }
+    catch (error) { console.error("DELETE /api/expenses Error:", error.message); res.status(500).json({ msg: "Server Error Deleting Expense" }); }
+});
+app.get("/api/monthlyCap", authMiddleware, async (req, res) => {
+  try { const capDoc = await MonthlyCap.findOne({ userId: req.userId }); res.status(200).json(capDoc ? [capDoc] : []); }
+  catch (error) { console.error("GET /api/monthlyCap Error:", error); res.status(500).json({ msg: "Server Error Fetching Cap" }); }
+});
+app.post("/api/monthlyCap", authMiddleware, async (req, res) => {
+  try { const { cap } = req.body; await MonthlyCap.findOneAndDelete({ userId: req.userId }); if (cap!==undefined && cap!==null && !isNaN(parseFloat(cap)) && parseFloat(cap)>0) { const newCap = new MonthlyCap({ userId: req.userId, cap: parseFloat(cap) }); await newCap.save(); res.status(200).json([newCap]); } else { res.status(200).json([]); } }
+  catch (error) { console.error("POST /api/monthlyCap Error:", error); res.status(500).json({ msg: "Server Error Setting Cap" }); }
+});
+
+// --- 404 and Error Handlers ---
+app.use('/api/*', (req, res) => res.status(404).json({ msg: `API endpoint not found: ${req.method} ${req.originalUrl}` }));
+app.use('*', (req, res) => res.status(404).send(`Cannot ${req.method} ${req.originalUrl}. (budget-api)`));
+app.use((err, req, res, next) => { console.error("SERVER ERROR (Global):", err.stack); res.status(500).json({ msg: 'Internal Server Error' }); });
+
+app.listen(PORT, (err) => {
+  if (err) { console.error(`SERVER ERROR: Failed to start on port ${PORT}:`, err); return; }
+  console.log(`SERVER LOG: Express server (budget-api) listening on port ${PORT}`);
+});
