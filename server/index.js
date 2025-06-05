@@ -3,8 +3,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require("mongoose");
-const http = require('http'); // Added
-const WebSocket = require('ws'); // Added
+const http = require('http');
+const WebSocket = require('ws');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -32,7 +32,6 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 
-// General request logging middleware
 app.use((req, res, next) => {
   console.log(`SERVER INCOMING REQUEST: Method: ${req.method}, Path: ${req.path}, Origin: ${req.headers.origin}`);
   next();
@@ -49,9 +48,41 @@ const mongoPass = process.env.MONGO_PASS;
 const mongoConnectionString = process.env.MONGO_URI || `mongodb://${mongoUser}:${mongoPass}@technickservices.com/React-Budget-App?authSource=admin`;
 
 console.log(`SERVER LOG: Attempting to connect to MongoDB at: ${mongoConnectionString.replace(mongoPass || "YOUR_DB_PASS", "****")}`);
-mongoose.connect(mongoConnectionString) // Removed useNewUrlParser and useUnifiedTopology
+mongoose.connect(mongoConnectionString)
   .then(() => console.log('SERVER LOG: MongoDB Connected Successfully!'))
   .catch(err => console.error('SERVER ERROR: MongoDB Connection Failed! Details:', err.message));
+
+// --- WebSocket Server Setup ---
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server, path: "/ws" });
+
+// Function to broadcast updates to all connected WebSocket clients
+function broadcastDataUpdate(updateType) { // MODIFIED: Simplified to send just a type
+  console.log(`SERVER WebSocket: Broadcasting update - Type: ${updateType}`);
+  const message = JSON.stringify({ type: updateType });
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+}
+
+wss.on('connection', (ws) => {
+  console.log('SERVER WebSocket: Client connected');
+  ws.on('message', (message) => {
+    console.log(`SERVER WebSocket: Received message => ${message}`);
+    ws.send(`Server received: ${message}`); // Echo for testing, can be removed
+  });
+  ws.on('close', () => {
+    console.log('SERVER WebSocket: Client disconnected');
+  });
+  ws.on('error', (error) => {
+    console.error('SERVER WebSocket: Error:', error);
+  });
+  ws.send(JSON.stringify({ type: 'WELCOME', payload: 'Welcome to the WebSocket server!' }));
+});
+// --- End WebSocket Server Setup ---
+
 
 // --- ROUTES ---
 console.log("SERVER LOG: Registering routes...");
@@ -87,6 +118,7 @@ app.post("/api/budgets", authMiddleware, async (req, res) => {
     const { id, name, max } = req.body;
     const newBudget = new Budget({ userId: req.userId, id, name, max });
     await newBudget.save();
+    broadcastDataUpdate('BUDGET_DATA_UPDATED'); // MODIFIED
     res.status(201).json(newBudget);
   } catch (error) { console.error("POST /api/budgets Error:", error); res.status(500).json({ msg: "Server Error Saving Budget" }); }
 });
@@ -98,6 +130,8 @@ app.delete("/api/budgets/:id", authMiddleware, async (req, res) => {
       return res.status(404).json({ msg: "Budget not found or not authorized to delete" });
     }
     await Expense.deleteMany({ budgetId: req.params.id, userId: req.userId });
+    broadcastDataUpdate('BUDGET_DATA_UPDATED'); // MODIFIED
+    broadcastDataUpdate('EXPENSE_DATA_UPDATED'); // MODIFIED (since expenses are also affected)
     res.status(200).json({ msg: "Budget and associated expenses deleted" });
   } catch (error) { console.error(`DELETE /api/budgets/${req.params.id} Error:`, error); res.status(500).json({ msg: "Server Error Deleting Budget" }); }
 });
@@ -115,6 +149,7 @@ app.post("/api/expenses", authMiddleware, async (req, res) => {
     const { id, description, amount, budgetId } = req.body;
     const newExpense = new Expense({ userId: req.userId, id, description, amount, budgetId });
     await newExpense.save();
+    broadcastDataUpdate('EXPENSE_DATA_UPDATED'); // MODIFIED
     res.status(201).json(newExpense);
   } catch (error) { console.error("POST /api/expenses Error:", error); res.status(500).json({ msg: "Server Error Saving Expense" }); }
 });
@@ -125,6 +160,7 @@ app.delete("/api/expenses/:id", authMiddleware, async (req, res) => {
     if (!expense) {
       return res.status(404).json({ msg: "Expense not found or not authorized to delete" });
     }
+    broadcastDataUpdate('EXPENSE_DATA_UPDATED'); // MODIFIED
     res.status(200).json({ msg: "Expense deleted" });
   } catch (error) { console.error(`DELETE /api/expenses/${req.params.id} Error:`, error); res.status(500).json({ msg: "Server Error Deleting Expense" }); }
 });
@@ -148,43 +184,12 @@ app.post("/api/monthlyCap", authMiddleware, async (req, res) => {
       { cap: parseFloat(cap) },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
+    broadcastDataUpdate('MONTHLY_CAP_UPDATED'); // MODIFIED
     res.status(200).json([updatedCap]);
   } catch (error) { console.error("POST /api/monthlyCap Error:", error); res.status(500).json({ msg: "Server Error Setting Monthly Cap" }); }
 });
 
-// ---- WebSocket Server Setup ----
-const server = http.createServer(app); // Create HTTP server from Express app
-
-const wss = new WebSocket.Server({ server, path: "/ws" }); // Attach WebSocket server to HTTP server, define a path
-
-wss.on('connection', (ws) => {
-  console.log('SERVER WebSocket: Client connected');
-
-  ws.on('message', (message) => {
-    console.log(`SERVER WebSocket: Received message => ${message}`);
-    // Example: Echo message back to client
-    // Or broadcast to all clients:
-    // wss.clients.forEach(client => {
-    //   if (client !== ws && client.readyState === WebSocket.OPEN) {
-    //     client.send(String(message)); // Ensure message is a string or Buffer
-    //   }
-    // });
-    ws.send(`Server received: ${message}`);
-  });
-
-  ws.on('close', () => {
-    console.log('SERVER WebSocket: Client disconnected');
-  });
-
-  ws.on('error', (error) => {
-    console.error('SERVER WebSocket: Error:', error);
-  });
-
-  ws.send('Welcome to the WebSocket server!');
-});
-// ---- END WebSocket Server Setup ----
-
-server.listen(PORT, () => { // Changed from app.listen to server.listen
+server.listen(PORT, () => {
   console.log(`SERVER LOG: Backend (budget-api) with WebSocket support is running on port ${PORT}`);
   console.log(`SERVER LOG: WebSocket server available at ws://localhost:${PORT}/ws (or wss://yourdomain/ws in production)`);
 });
