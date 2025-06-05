@@ -38,7 +38,7 @@ export default function BudgetCard({
             min={0}
             max={max}
             now={amount}
-            label={`$${max-amount} left`}
+            label={`$${max-amount} Remaining`}
           />
         )}
         {!hideButtons && (
