@@ -38,7 +38,7 @@ export default function BudgetCard({
             min={0}
             max={max}
             now={amount}
-            label={`$${max-amount} Remaining`}
+            label={getProgressBarLabel(amount, max)}
           />
         )}
         {!hideButtons && (
@@ -65,4 +65,9 @@ function getProgressBarVariant(amount, max) {
   if (ratio < 0.5) return "primary"
   if (ratio < 0.75) return "warning"
   return "danger"
+}
+
+function getProgressBarLabel(amount, max) {
+  const remaining = amount - max
+  return `$${currencyFormatter.format(remaining)} Remaining`
 }
