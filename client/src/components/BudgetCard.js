@@ -38,7 +38,7 @@ export default function BudgetCard({
             min={0}
             max={max}
             now={amount}
-            label={amount}
+            label={currencyFormatter.format(amount)}
           />
         )}
         {!hideButtons && (
