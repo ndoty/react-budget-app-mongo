@@ -23,13 +23,11 @@ export default function BudgetCard({
         <Card.Title className="d-flex justify-content-between align-items-baseline fw-normal mb-3">
           <div className="me-2">{name}</div>
           <div className="d-flex align-items-baseline">
-            // {max && !hideButtons && (
-            //   getRemaining(amount, max)
-            // )}
+            {currencyFormatter.format(amount)}
             {max && (
-              Test
               <span className="text-muted fs-6 ms-1">
-                {currencyFormatter.format(max)}
+                from {currencyFormatter.format(max)}
+                 = {getRemaining(amount, max)}
               </span>
             )}
           </div>
