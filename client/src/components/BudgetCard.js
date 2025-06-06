@@ -39,9 +39,11 @@ export default function BudgetCard({
             max={max}
             now={amount}
           />
-          <span className="text-muted fs-6 ms-1">
-            {currencyFormatter.format(amount)} Remaining
-          </span>
+          <div className="d-flex align-items-baseline">    
+            <span className="text-muted fs-6 ms-1">
+              {currencyFormatter.format(amount)} Remaining
+            </span>
+          </div>
         )}
         {!hideButtons && (
           <Stack direction="horizontal" gap="2" className="mt-4">
