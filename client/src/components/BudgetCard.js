@@ -24,7 +24,7 @@ export default function BudgetCard({
           <div className="me-2">{name}</div>
           <div className="d-flex align-items-baseline">
             {max && !hideButtons && (
-              ${getRemaining(amount, max)}
+              getRemaining(amount, max)
             )}
             {max && (  
               <span className="text-muted fs-6 ms-1">
@@ -72,6 +72,6 @@ function getProgressBarVariant(amount, max) {
 }
 
 function getRemaining(amount, max) {
-  const remaining = amount - max
-  return `{currencyFormatter.format(remaining*-1)} Remaining`
+  const remaining = max - amount
+  return `{currencyFormatter.format(remaining)} Remaining`
 }
