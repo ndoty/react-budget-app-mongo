@@ -24,7 +24,7 @@ export default function BudgetCard({
           <div className="me-2">{name}</div>
           <div className="d-flex align-items-baseline">
             {max && (
-              {getRemaining(amount, max)}
+              getRemaining(amount, max)
               <span className="text-muted fs-6 ms-1">
                 {currencyFormatter.format(max)}
               </span>
