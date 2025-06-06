@@ -70,5 +70,5 @@ function getProgressBarVariant(amount, max) {
 
 function getRemaining(amount, max) {
   const remaining = amount - max
-  return `${currencyFormatter.format(remaining*-1)} Remaining`
+  return `{currencyFormatter.format(remaining*-1)} Remaining`
 }
