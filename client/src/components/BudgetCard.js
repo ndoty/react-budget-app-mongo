@@ -26,8 +26,7 @@ export default function BudgetCard({
             {currencyFormatter.format(amount)}
             {max && (
               <span className="text-muted fs-6 ms-1">
-                from {currencyFormatter.format(max)}
-                 = {getRemaining(amount, max)}
+                / {currencyFormatter.format(max)}
               </span>
             )}
           </div>
