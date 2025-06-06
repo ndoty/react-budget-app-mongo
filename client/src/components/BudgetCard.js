@@ -23,7 +23,9 @@ export default function BudgetCard({
         <Card.Title className="d-flex justify-content-between align-items-baseline fw-normal mb-3">
           <div className="me-2">{name}</div>
           <div className="d-flex align-items-baseline">
-            {currencyFormatter.format(amount)}
+            {!max && (
+              {currencyFormatter.format(amount)}
+            )}
             {max && (
               <span className="text-muted fs-6 ms-1">
                 / {currencyFormatter.format(max)}
@@ -39,11 +41,6 @@ export default function BudgetCard({
             max={max}
             now={amount}
           />
-          <div className="d-flex align-items-baseline">    
-            <span className="text-muted fs-6 ms-1">
-              {currencyFormatter.format(amount)} Remaining
-            </span>
-          </div>
         )}
         {!hideButtons && (
           <Stack direction="horizontal" gap="2" className="mt-4">
