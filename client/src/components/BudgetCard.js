@@ -40,7 +40,7 @@ export default function BudgetCard({
             now={amount}
           />
           <span className="text-muted fs-6 ms-1">
-            / {currencyFormatter.format(amount)}
+            {currencyFormatter.format(amount)} Remaining
           </span>
         )}
         {!hideButtons && (
@@ -67,9 +67,4 @@ function getProgressBarVariant(amount, max) {
   if (ratio < 0.5) return "primary"
   if (ratio < 0.75) return "warning"
   return "danger"
-}
-
-function getRemaining(amount, max) {
-  const remaining = max - amount
-  return `{currencyFormatter.format(remaining)} Remaining`
 }
