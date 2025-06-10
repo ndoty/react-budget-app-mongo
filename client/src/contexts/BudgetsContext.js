@@ -17,6 +17,13 @@ const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget-api.techni
 
 export const UNCATEGORIZED_BUDGET_ID = "Uncategorized";
 
+// MODIFIED: Define default empty arrays outside the component.
+// This gives them a stable reference and prevents them from being re-created on every render,
+// which solves the infinite loop in the useMongo hook.
+const defaultBudgets = [];
+const defaultExpenses = [];
+const defaultMonthlyCap = [];
+
 export function useBudgets() {
   const context = useContext(BudgetsContext);
   if (context === undefined) {
@@ -28,9 +35,10 @@ export function useBudgets() {
 export const BudgetsProvider = ({ children }) => {
   const { isAuthenticated, loading: authLoading, token } = useAuth();
 
-  const [budgets, setBudgets] = useMongo("budgets", []);
-  const [expenses, setExpenses] = useMongo("expenses", []);
-  const [monthlyCap, setMonthlyCap] = useMongo("monthlyCap", []);
+  // MODIFIED: Pass the stable default arrays to the useMongo hook.
+  const [budgets, setBudgets] = useMongo("budgets", defaultBudgets);
+  const [expenses, setExpenses] = useMongo("expenses", defaultExpenses);
+  const [monthlyCap, setMonthlyCap] = useMongo("monthlyCap", defaultMonthlyCap);
 
   useEffect(() => {
     if (!isAuthenticated || !token || authLoading) return;
@@ -60,7 +68,6 @@ export const BudgetsProvider = ({ children }) => {
         console.error("BudgetsContext WebSocket Error:", error);
         return;
     }
-
     const refetchAllData = async () => {
       if (isAuthenticated && token) {
         const budgetsData = await fetchDataFromAPI("budgets", token);
@@ -71,7 +78,6 @@ export const BudgetsProvider = ({ children }) => {
         setMonthlyCap(Array.isArray(capData) ? capData : []);
       }
     };
-
     socket.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
@@ -80,7 +86,6 @@ export const BudgetsProvider = ({ children }) => {
         }
       } catch (e) {}
     };
-
     return () => {
       if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
         socket.close();
@@ -88,7 +93,6 @@ export const BudgetsProvider = ({ children }) => {
     };
   }, [isAuthenticated, token, authLoading, setBudgets, setExpenses, setMonthlyCap]);
 
-  // ... (rest of the functions: getBudgetExpenses, getBudget, getExpense, addExpense, etc. are unchanged) ...
   function getBudgetExpenses(budgetId) { return Array.isArray(expenses) ? expenses.filter((expense) => expense.budgetId === budgetId) : []; }
   function getBudget(id) { return Array.isArray(budgets) ? budgets.find(b => b.id === id) : undefined; }
   function getExpense(id) { return Array.isArray(expenses) ? expenses.find(e => e.id === id) : undefined; }
@@ -96,9 +100,32 @@ export const BudgetsProvider = ({ children }) => {
   async function addBudget({ name, max }) { if (Array.isArray(budgets) && budgets.find((b) => b.name === name)) { return alert("Budget with this name already exists."); } await postSingleItemToAPI("budgets", { id: uuidV4(), name, max }, token); }
   async function deleteBudget({ id }) { await deleteItemFromAPI("budgets", id, token); }
   async function deleteExpense({ id }) { await deleteItemFromAPI("expenses", id, token); }
-  async function updateBudget({ id, ...updates }) { if (!id) return; try { await axios.put(`${API_URL_BASE}/budgets/${id}`, updates, { headers: { Authorization: `Bearer ${token}` } }); } catch (error) { console.error("Failed to update budget:", error); } }
-  async function updateExpense({ id, ...updates }) { if (!id) return; try { await axios.put(`${API_URL_BASE}/expenses/${id}`, updates, { headers: { Authorization: `Bearer ${token}` } }); } catch (error) { console.error("Failed to update expense:", error); } }
-  async function setMonthlyCapTotal(capAmountStr) { const amount = parseFloat(capAmountStr); let capDataPayload = {}; if (!isNaN(amount) && amount >= 0) capDataPayload = { cap: amount }; else { return console.error("Invalid cap amount:", capAmountStr); } await postMonthlyCapToAPI(capDataPayload, token); }
+  
+  async function updateBudget({ id, ...updates }) {
+    if (!id) return;
+    try {
+      await axios.put(`${API_URL_BASE}/budgets/${id}`, updates, { headers: { Authorization: `Bearer ${token}` } });
+    } catch (error) {
+      console.error("Failed to update budget:", error);
+    }
+  }
+
+  async function updateExpense({ id, ...updates }) {
+    if (!id) return;
+    try {
+      await axios.put(`${API_URL_BASE}/expenses/${id}`, updates, { headers: { Authorization: `Bearer ${token}` } });
+    } catch (error) {
+      console.error("Failed to update expense:", error);
+    }
+  }
+
+  async function setMonthlyCapTotal(capAmountStr) {
+    const amount = parseFloat(capAmountStr);
+    let capDataPayload = {};
+    if (!isNaN(amount) && amount >= 0) capDataPayload = { cap: amount };
+    else { return console.error("Invalid cap amount:", capAmountStr); }
+    await postMonthlyCapToAPI(capDataPayload, token);
+  }
 
   if (authLoading) {
     return <Container className="my-4"><p>Loading User Data...</p></Container>;
