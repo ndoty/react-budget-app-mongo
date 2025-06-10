@@ -1,17 +1,26 @@
 const mongoose = require("mongoose");
 
 const expenseSchema = new mongoose.Schema({
-  id: {
+  userId: { // Added
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  id: { // Client-side UUID
     type: String,
+    required: true,
   },
   description: {
     type: String,
+    required: true,
   },
   amount: {
     type: Number,
+    required: true,
   },
-  budgetId: {
+  budgetId: { // Refers to client-side Budget.id
     type: String,
+    required: true,
   },
 });
 

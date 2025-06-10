@@ -1,86 +1,114 @@
-import Axios from "axios"
-import { useState, useEffect } from "react"
+// client/src/hooks/useMongo.js
+import axios from "axios";
+import { useState, useEffect, useContext } from "react"; // Added useContext
+import { AuthContext, useAuth } from "../contexts/AuthContext"; // Import AuthContext directly for token access
 
-const apiURL = "//budget-api.technickservices.com/api/"
+const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget-api.technickservices.com/api";
 
-const fetchData = async (key) => {
+// Helper function to get headers with token
+const getAuthHeaders = (token) => {
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+  return {};
+};
+
+export const fetchDataFromAPI = async (key, token) => { // Pass token to the function
+  const targetUrl = `${API_URL_BASE}/${key}`;
+  const headers = getAuthHeaders(token);
+  console.log(`\n--- CLIENT useMongo: fetchDataFromAPI ---`);
+  console.log(`Timestamp: ${new Date().toISOString()}`);
+  console.log(`Attempting to GET: ${targetUrl}`);
+  console.log(`Request HEADERS for ${key}: ${JSON.stringify(headers)}`);
+
   try {
-    const response = await Axios.get(`${apiURL}${key}`)
-    return response.data
+    const response = await axios.get(targetUrl, { headers }); // Pass headers explicitly
+    console.log(`CLIENT useMongo: fetchDataFromAPI for ${key} SUCCEEDED. Status: ${response.status}`);
+    return response.data;
   } catch (error) {
-    console.error("Error fetching data:", error)
-    return null
-  }
-}
-
-const postData = async (key, data) => {
-  try {
-    const response = await Axios.post(`${apiURL}${key}`, { data })
-  } catch (error) {
-    console.error("Error fetching data:", error)
-    return null
-  }
-}
-
-export default function useMongo(key) {
-  const [value, setValue] = useState([])
-  const [previousBudgets, setPreviousBudgets] = useState([])
-  const [previousExpenses, setPreviousExpenses] = useState([])
-  const [previousMonthlyCap, setPreviousMonthlyCap] = useState([])
-
-
-  const setPrevious = (key, value) => {
-    if (key === "expenses" ) {
-      setPreviousExpenses(value)
-    }    
-    if (key === "budgets" ) {
-      setPreviousBudgets(value)
+    console.error(`CLIENT useMongo: Error fetching ${key} from ${targetUrl}.`);
+    if (error.response) {
+      console.error(`Error Response Status: ${error.response.status}`);
+      console.error(`Error Response Data: ${JSON.stringify(error.response.data)}`);
+      if (error.response.status === 401) {
+        console.error("--> fetchDataFromAPI received 401 Unauthorized from backend.");
+      }
+    } else if (error.request) {
+      console.error("Error Request: No response received from server.", error.request);
+    } else {
+      console.error("Error Message (client-side issue before request was sent):", error.message);
     }
-    if (key === "monthlyCap" ) {
-      setPreviousMonthlyCap(value)
-    }
+    console.log(`--- END CLIENT useMongo: fetchDataFromAPI (Error for ${key}) ---`);
+    return null;
   }
-  
-  const getPrevious = (key) => {
-    if (key === "expenses" ) {
-      const value = previousExpenses
-      return value
-    }    
-    if (key === "budgets" ) {
-      const value = previousBudgets
-      return value
-    }
-    if (key === "monthlyCap" ) {
-      const value = previousMonthlyCap
-      return value
-    }
+};
+
+export const postSingleItemToAPI = async (key, item, token) => { // Pass token
+  const targetUrl = `${API_URL_BASE}/${key}`;
+  const headers = getAuthHeaders(token);
+  console.log(`CLIENT useMongo: postSingleItemToAPI - Attempting to POST to ${targetUrl}`);
+  console.log(`Request HEADERS for POST ${key}: ${JSON.stringify(headers)}`);
+  try { 
+    const response = await axios.post(targetUrl, item, { headers }); 
+    return response.data; 
+  } catch (error) { 
+    console.error(`Error posting single ${key} to ${targetUrl}:`, error.response?.status, error.response?.data || error.message); 
+    return null; 
   }
-  
+};
+
+export const deleteItemFromAPI = async (key, itemId, token) => { // Pass token
+  const targetUrl = `${API_URL_BASE}/${key}/${itemId}`;
+  const headers = getAuthHeaders(token);
+  console.log(`CLIENT useMongo: deleteItemFromAPI - Attempting to DELETE from ${targetUrl}`);
+  console.log(`Request HEADERS for DELETE ${key}: ${JSON.stringify(headers)}`);
+  try { 
+    const response = await axios.delete(targetUrl, { headers }); 
+    return response.data; 
+  } catch (error) { 
+    console.error(`Error deleting ${key} ID ${itemId} from ${targetUrl}:`, error.response?.status, error.response?.data || error.message); 
+    return null; 
+  }
+};
+
+export const postMonthlyCapToAPI = async (capData, token) => { // Pass token
+  const targetUrl = `${API_URL_BASE}/monthlyCap`;
+  const headers = getAuthHeaders(token);
+  console.log(`CLIENT useMongo: postMonthlyCapToAPI - Attempting to POST to ${targetUrl}`);
+  console.log(`Request HEADERS for POST monthlyCap: ${JSON.stringify(headers)}`);
+  try { 
+    const response = await axios.post(targetUrl, capData, { headers }); 
+    return response.data; 
+  } catch (error) { 
+    console.error(`Error posting monthlyCap to ${targetUrl}:`, error.response?.status, error.response?.data || error.message); 
+    return null; 
+  }
+};
+
+export default function useMongo(key, initialDefault = []) {
+  const [value, setValue] = useState(initialDefault);
+  // Get token directly from AuthContext to pass to API functions
+  const { isAuthenticated, loading: authLoading, token } = useAuth(); 
+
   useEffect(() => {
-    fetchData(key).then((jsonValue) => {
-      setValue(jsonValue)
-    })
-  }, [])
+    const loadData = async () => {
+      if (isAuthenticated && token) { // Ensure token is also present
+        // console.log(`useMongo HOOK (${key}): Authenticated & token present. Fetching data...`);
+        // Pass the current token to fetchDataFromAPI
+        const data = await fetchDataFromAPI(key, token); 
+        setValue(Array.isArray(data) ? data : initialDefault);
+      } else {
+        // console.log(`useMongo HOOK (${key}): Not Authenticated or no token. Clearing data.`);
+        setValue(initialDefault);
+      }
+    };
 
-  useEffect(() => {
-    let postIt = false
-    
-    const lastValue = getPrevious(key)
+    if (!authLoading) {
+      loadData();
+    } else {
+      setValue(initialDefault);
+    }
+  }, [key, isAuthenticated, authLoading, token]); // Add token as a dependency
 
-    if (lastValue.length === 0 && value.length === 0) {
-      return
-    } else if (lastValue !== value) {
-      setPrevious(key, value)
-      postIt = true
-    } else if (lastValue.length === 0 && value.length >= 1) {
-      setPrevious(key, value)
-      postIt = true
-    }   
-
-    if (postIt) {
-      postData(key, JSON.stringify(value))
-    }   
-  }, [key, value])
-
-  return [value, setValue]
+  return [value, setValue];
 }

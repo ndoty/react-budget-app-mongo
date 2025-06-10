@@ -1,16 +1,17 @@
-import { Modal, Button, Stack } from "react-bootstrap"
-import { UNCATEGORIZED_BUDGET_ID, useBudgets } from "../contexts/BudgetsContext"
-import { currencyFormatter } from "../utils"
+// client/src/components/ViewExpensesModal.js
+import { Modal, Button, Stack } from "react-bootstrap"; // Modal is imported
+import { UNCATEGORIZED_BUDGET_ID, useBudgets } from "../contexts/BudgetsContext";
+import { currencyFormatter } from "../utils"; // Assuming utils.js exports this
 
 export default function ViewExpensesModal({ budgetId, handleClose }) {
-  const { getBudgetExpenses, budgets, deleteBudget, deleteExpense } =
-    useBudgets()
+  const { getBudgetExpenses, budgets, deleteBudget, deleteExpense } = useBudgets();
 
-  const expenses = getBudgetExpenses(budgetId)
-  const budget =
-    UNCATEGORIZED_BUDGET_ID === budgetId
+  // Ensure expenses are always an array, even if getBudgetExpenses might return null/undefined initially
+  const expenses = getBudgetExpenses(budgetId) || []; 
+  
+  const budget = budgetId === UNCATEGORIZED_BUDGET_ID
       ? { name: "Uncategorized", id: UNCATEGORIZED_BUDGET_ID }
-      : budgets.find(b => b.id === budgetId)
+      : (Array.isArray(budgets) ? budgets.find(b => b.id === budgetId) : undefined);
 
   return (
     <Modal show={budgetId != null} onHide={handleClose}>
@@ -18,15 +19,17 @@ export default function ViewExpensesModal({ budgetId, handleClose }) {
         <Modal.Title>
           <Stack direction="horizontal" gap="2">
             <div>Expenses - {budget?.name}</div>
-            {budgetId !== UNCATEGORIZED_BUDGET_ID && (
+            {budgetId !== UNCATEGORIZED_BUDGET_ID && budget && (
               <Button
-                onClick={() => {
-                  deleteBudget(budget)
-                  handleClose()
+                onClick={async () => {
+                  if (budget && budget.id) { // budget.id is the client-side UUID
+                    await deleteBudget({ id: budget.id }); 
+                  }
+                  handleClose();
                 }}
                 variant="outline-danger"
               >
-                Delete
+                Delete Budget
               </Button>
             )}
           </Stack>
@@ -41,7 +44,7 @@ export default function ViewExpensesModal({ budgetId, handleClose }) {
                 {currencyFormatter.format(expense.amount)}
               </div>
               <Button
-                onClick={() => deleteExpense(expense)}
+                onClick={async () => await deleteExpense({ id: expense.id })} // expense.id is client-side UUID
                 size="sm"
                 variant="outline-danger"
               >
@@ -52,5 +55,5 @@ export default function ViewExpensesModal({ budgetId, handleClose }) {
         </Stack>
       </Modal.Body>
     </Modal>
-  )
+  );
 }

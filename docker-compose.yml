@@ -1,4 +1,3 @@
-version: "3"
 services:
   frontend:
     env_file: ./.env
@@ -16,8 +15,7 @@ services:
           - frontend
     volumes:
       - ./client:/usr/src/app
-    links:
-      - backend
+      - /usr/src/app/node_modules
     depends_on:
       - backend
   backend:
@@ -38,6 +36,7 @@ services:
           - backend
     volumes:
       - ./server:/usr/src/app
+      - /usr/src/app/node_modules
 
 networks:
   Web-Budget-App:

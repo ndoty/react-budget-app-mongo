@@ -1,25 +1,26 @@
-import { Form, Modal, Button } from "react-bootstrap"
-import { useRef } from "react"
-import { useBudgets, UNCATEGORIZED_BUDGET_ID } from "../contexts/BudgetsContext"
+// client/src/components/AddExpenseModal.js
+import { Form, Modal, Button } from "react-bootstrap"; // Modal is imported
+import { useRef } from "react";
+import { useBudgets, UNCATEGORIZED_BUDGET_ID } from "../contexts/BudgetsContext";
 
 export default function AddExpenseModal({
   show,
   handleClose,
   defaultBudgetId,
 }) {
-  const descriptionRef = useRef()
-  const amountRef = useRef()
-  const budgetIdRef = useRef()
-  const { addExpense, budgets } = useBudgets()
+  const descriptionRef = useRef();
+  const amountRef = useRef();
+  const budgetIdRef = useRef();
+  const { addExpense, budgets } = useBudgets();
 
   function handleSubmit(e) {
-    e.preventDefault()
+    e.preventDefault();
     addExpense({
       description: descriptionRef.current.value,
       amount: parseFloat(amountRef.current.value),
       budgetId: budgetIdRef.current.value,
-    })
-    handleClose()
+    });
+    handleClose();
   }
 
   return (
@@ -46,7 +47,7 @@ export default function AddExpenseModal({
           <Form.Group className="mb-3" controlId="budgetId">
             <Form.Label>Budget</Form.Label>
             <Form.Select defaultValue={defaultBudgetId} ref={budgetIdRef}>
-              <option id={UNCATEGORIZED_BUDGET_ID}>Uncategorized</option>
+              <option value={UNCATEGORIZED_BUDGET_ID}>Uncategorized</option> {/* Ensure value is set for Uncategorized option */}
               {budgets.map(budget => (
                 <option key={budget.id} value={budget.id}>
                   {budget.name}
@@ -62,5 +63,5 @@ export default function AddExpenseModal({
         </Modal.Body>
       </Form>
     </Modal>
-  )
+  );
 }

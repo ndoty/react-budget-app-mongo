@@ -1,16 +1,24 @@
-import { Form, Modal, Button } from "react-bootstrap"
-import { useRef } from "react"
-import { useBudgets } from "../contexts/BudgetsContext"
+// client/src/components/AddFixedMonthlyTotal.js
+import { Form, Modal, Button } from "react-bootstrap"; // Modal is imported
+import { useRef } from "react";
+import { useBudgets } from "../contexts/BudgetsContext";
 
-export default function AddFixedMonthlyTotalModal({ show, handleClose }) {
-  const { setMonthlyCapTotal, monthlyCap } = useBudgets()
+export default function AddFixedMonthlyTotalModal({ show, handleClose }) { // Component name in export matches usage in App.js
+  const { setMonthlyCapTotal, monthlyCap } = useBudgets();
 
-  const amountRef = useRef()
+  const amountRef = useRef();
   function handleSubmit(e) {
-    e.preventDefault()
-    setMonthlyCapTotal(amountRef.current.value !== 0 ? amountRef.current.value : null )
-    handleClose()
+    e.preventDefault();
+    // Ensure amountRef.current.value is treated as a string for parseFloat
+    const value = amountRef.current.value;
+    setMonthlyCapTotal(value); // Pass the string value, let context handle parsing
+    handleClose();
   }
+
+  // Determine placeholder: if monthlyCap is an array and has an item, use its cap.
+  const placeholderCap = Array.isArray(monthlyCap) && monthlyCap.length > 0 && monthlyCap[0] && monthlyCap[0].cap !== undefined 
+                         ? monthlyCap[0].cap 
+                         : 0;
 
   return (
     <Modal show={show} onHide={handleClose}>
@@ -27,7 +35,7 @@ export default function AddFixedMonthlyTotalModal({ show, handleClose }) {
               required
               min={0}
               step={0.01}
-              placeholder={monthlyCap.length > 0 ? monthlyCap[0].cap : 0}
+              defaultValue={placeholderCap} // Use defaultValue for uncontrolled input with ref or make it controlled
             />
           </Form.Group>
           <div className="d-flex justify-content-end">
@@ -38,5 +46,5 @@ export default function AddFixedMonthlyTotalModal({ show, handleClose }) {
         </Modal.Body>
       </Form>
     </Modal>
-  )
+  );
 }
