@@ -11,15 +11,14 @@ export default function BudgetCard({
   onViewExpensesClick,
   onEditBudgetClick,
 }) {
-  // KEEP THIS LOG: This is the only log we want to see in the browser console now.
-  console.log(`Rendering BudgetCard for "${name}". The onEditBudgetClick prop is a: ${typeof onEditBudgetClick}`);
-
   const classNames = []
   if (amount > max) {
     classNames.push("bg-danger", "bg-opacity-10")
   } else if (gray) {
     classNames.push("bg-light")
   }
+
+  // The debugging console.log has been removed from this version.
 
   return (
     <Card className={classNames.join(" ")}>
