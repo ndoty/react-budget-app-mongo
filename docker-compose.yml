@@ -5,17 +5,19 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
-    environment:
-      PORT: ${CLIENT_PORT}
+    # The 'environment' block is removed as build-time env vars (like REACT_APP_*)
+    # should be handled inside the Dockerfile build process if needed, using build args.
+    # The PORT env var is not needed by the Nginx container.
     ports:
-      - ${CLIENT_PORT}:${CLIENT_PORT}
+      # Map the host port (defined by CLIENT_PORT in your .env file) to port 80 inside the container (where Nginx listens).
+      - ${CLIENT_PORT}:80
     networks:
       Web-Budget-App:
         aliases:
           - frontend
-    volumes:
-      - ./client:/usr/src/app
-      - /usr/src/app/node_modules
+    # VOLUMES REMOVED for the frontend service.
+    # For production, we want to use the static files that were copied into the image
+    # during the `docker build` process. Mounting volumes here would overwrite the built files.
     depends_on:
       - backend
   backend:
