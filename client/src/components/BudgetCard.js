@@ -9,6 +9,7 @@ export default function BudgetCard({
   hideButtons,
   onAddExpenseClick,
   onViewExpensesClick,
+  onEditBudgetClick, // MODIFIED: Added prop for edit click
 }) {
   const classNames = []
   if (amount > max) {
@@ -42,6 +43,13 @@ export default function BudgetCard({
         )}
         {!hideButtons && (
           <Stack direction="horizontal" gap="2" className="mt-4">
+            {/* MODIFIED: Added Edit Button */}
+            <Button
+              variant="outline-info"
+              onClick={onEditBudgetClick}
+            >
+              Edit
+            </Button>
             <Button
               variant="outline-primary"
               className="ms-auto"
