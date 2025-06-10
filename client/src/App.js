@@ -1,4 +1,88 @@
-// ... All imports and other components like LoginPage, RegisterPage ...
+// client/src/App.js
+import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
+import { Button, Stack, Container, Nav, Navbar, Form } from "react-bootstrap";
+
+// Components
+import AddFixedMonthlyTotalModal from "./components/AddFixedMonthlyTotal";
+import AddBudgetModal from "./components/AddBudgetModal";
+import EditBudgetModal from "./components/EditBudgetModal";
+import AddExpenseModal from "./components/AddExpenseModal";
+import EditExpenseModal from "./components/EditExpenseModal";
+import ViewExpensesModal from "./components/ViewExpensesModal";
+import BudgetCard from "./components/BudgetCard";
+import UncategorizedBudgetCard from "./components/UncategorizedBudgetCard";
+import TotalBudgetCard from "./components/TotalBudgetCard";
+
+// Contexts & Hooks
+import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
+import { useAuth, AuthProvider } from "./contexts/AuthContext";
+
+// --- Authentication Pages ---
+function LoginPage() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const { login, loading: authContextLoading } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    const result = await login(username, password);
+    if (result.success) {
+      navigate("/");
+    } else {
+      setError(result.message || "Failed to login");
+    }
+  };
+
+  return (
+    <Container className="my-4" style={{ maxWidth: "400px", paddingTop: '50px' }}>
+      <h2>Login</h2>
+      {error && <p className="text-danger">{error}</p>}
+      <Form onSubmit={handleSubmit}>
+        <Form.Group className="mb-3"><Form.Label>Username</Form.Label><Form.Control type="text" value={username} onChange={(e) => setUsername(e.target.value)} required /></Form.Group>
+        <Form.Group className="mb-3"><Form.Label>Password</Form.Label><Form.Control type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></Form.Group>
+        <Button type="submit" variant="primary" disabled={authContextLoading}>Login</Button>
+        <p className="mt-3">Don't have an account? <Link to="/register">Register here</Link></p>
+      </Form>
+    </Container>
+  );
+}
+
+function RegisterPage() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const { register, loading: authContextLoading } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (password !== confirmPassword) { setError("Passwords do not match"); return; }
+    const result = await register(username, password);
+    if (result.success) {
+      alert("Registration successful! Please login.");
+      navigate("/login");
+    } else { setError(result.message || "Failed to register"); }
+  };
+  return (
+     <Container className="my-4" style={{ maxWidth: "400px", paddingTop: '50px' }}>
+      <h2>Register</h2>
+      {error && <p className="text-danger">{error}</p>}
+      <Form onSubmit={handleSubmit}>
+        <Form.Group className="mb-3"><Form.Label>Username</Form.Label><Form.Control type="text" value={username} onChange={(e) => setUsername(e.target.value)} required /></Form.Group>
+        <Form.Group className="mb-3"><Form.Label>Password</Form.Label><Form.Control type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></Form.Group>
+        <Form.Group className="mb-3"><Form.Label>Confirm Password</Form.Label><Form.Control type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required /></Form.Group>
+        <Button type="submit" variant="primary" disabled={authContextLoading}>Register</Button>
+         <p className="mt-3">Already have an account? <Link to="/login">Login here</Link></p>
+      </Form>
+    </Container>
+  );
+}
 
 // --- Main application component for budgets ---
 function BudgetAppContent() {
@@ -68,7 +152,6 @@ function BudgetAppContent() {
                 max={budget.max}
                 onAddExpenseClick={() => openAddExpenseModal(budget.id)}
                 onViewExpensesClick={() => setViewExpensesModalBudgetId(budget.id)}
-                // Ensure this line exists and is passing the correct function
                 onEditBudgetClick={() => openEditBudgetModal(budget.id)}
               />
             );
@@ -77,8 +160,6 @@ function BudgetAppContent() {
           <TotalBudgetCard />
         </div>
       </Container>
-      
-      {/* All the modals go here... */}
       <AddBudgetModal show={showAddBudgetModal} handleClose={() => setShowAddBudgetModal(false)} />
       <AddExpenseModal show={showAddExpenseModal} defaultBudgetId={addExpenseModalBudgetId} handleClose={() => setShowAddExpenseModal(false)} />
       <ViewExpensesModal
@@ -111,5 +192,35 @@ function BudgetAppContent() {
   );
 }
 
-// ... rest of App.js (ProtectedRoute, App component, etc.) ...
-// This should be the same as the previous full file provided.
+// --- Protected Route Component ---
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) {
+    return <Container className="my-4" style={{textAlign: 'center'}}><p>Authenticating...</p></Container>;
+  }
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+// --- Main App Component ---
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <BudgetsProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/" element={ <ProtectedRoute> <BudgetAppContent /> </ProtectedRoute> } />
+            <Route path="*" element={ <Navigate to="/login" replace />} />
+          </Routes>
+        </BudgetsProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
+
+// This line is crucial for the import in index.js to work
+export default App;
