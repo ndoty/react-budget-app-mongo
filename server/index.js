@@ -29,7 +29,10 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 
+// Removed general request logging middleware
+app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
+
 app.use(express.json());
 
 // --- MongoDB Connection ---
@@ -46,7 +49,6 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, path: "/ws" });
 
 function broadcastDataUpdate(updateType) {
-  console.log(`SERVER WebSocket: Broadcasting update - Type: ${updateType}`);
   const message = JSON.stringify({ type: updateType });
   wss.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
@@ -59,7 +61,9 @@ wss.on('connection', (ws) => {
   console.log('SERVER WebSocket: Client connected');
   ws.on('close', () => console.log('SERVER WebSocket: Client disconnected'));
   ws.on('error', (error) => console.error('SERVER WebSocket: Error:', error));
+  ws.send(JSON.stringify({ type: 'WELCOME', payload: 'Welcome to the WebSocket server!' }));
 });
+
 
 // --- ROUTES ---
 const authRoutes = require('./routes/auth');
@@ -70,6 +74,11 @@ const MonthlyCap = require('./models/MonthlyCap');
 
 app.use('/api/auth', authRoutes);
 
+app.get('/server-status', (req, res) => {
+    res.status(200).send('Backend server (budget-api) is alive.');
+});
+
+// ... (Rest of the routes for Budgets, Expenses, MonthlyCap are unchanged) ...
 // Budgets
 app.get("/api/budgets", authMiddleware, async (req, res) => {
   try {
@@ -98,20 +107,18 @@ app.delete("/api/budgets/:id", authMiddleware, async (req, res) => {
   } catch (error) { res.status(500).json({ msg: "Server Error" }); }
 });
 
-// MODIFIED: Added PUT route for budgets
 app.put("/api/budgets/:id", authMiddleware, async (req, res) => {
   try {
     const { name, max } = req.body;
     const updatedBudget = await Budget.findOneAndUpdate(
       { id: req.params.id, userId: req.userId },
       { name, max },
-      { new: true } // Return the updated document
+      { new: true }
     );
     if (!updatedBudget) return res.status(404).json({ msg: "Budget not found" });
     broadcastDataUpdate('BUDGET_DATA_UPDATED');
     res.json(updatedBudget);
   } catch (error) {
-    console.error("PUT /api/budgets/:id Error:", error);
     res.status(500).json({ msg: "Server Error Updating Budget" });
   }
 });
@@ -143,20 +150,18 @@ app.delete("/api/expenses/:id", authMiddleware, async (req, res) => {
   } catch (error) { res.status(500).json({ msg: "Server Error" }); }
 });
 
-// MODIFIED: Added PUT route for expenses
 app.put("/api/expenses/:id", authMiddleware, async (req, res) => {
   try {
     const { description, amount, budgetId } = req.body;
     const updatedExpense = await Expense.findOneAndUpdate(
       { id: req.params.id, userId: req.userId },
       { description, amount, budgetId },
-      { new: true } // Return the updated document
+      { new: true }
     );
     if (!updatedExpense) return res.status(404).json({ msg: "Expense not found" });
     broadcastDataUpdate('EXPENSE_DATA_UPDATED');
     res.json(updatedExpense);
   } catch (error) {
-    console.error("PUT /api/expenses/:id Error:", error);
     res.status(500).json({ msg: "Server Error Updating Expense" });
   }
 });
