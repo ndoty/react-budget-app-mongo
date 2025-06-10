@@ -1,9 +1,10 @@
 // client/src/contexts/BudgetsContext.js
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { Container } from "react-bootstrap";
+import React, { createContext, useContext, useEffect } from "react"; // MODIFIED: Removed unused useState
+import { Container } from "react-bootstrap"; // MODIFIED: Removed unused Modal, Button, Stack, Form
 import { v4 as uuidV4 } from "uuid";
-import axios from "axios"; // MODIFIED: Import axios for update functions
+import axios from "axios";
 
+// ... (rest of the file is unchanged, the full version is below for reference)
 import useMongo, {
   postSingleItemToAPI,
   deleteItemFromAPI,
@@ -88,7 +89,6 @@ export const BudgetsProvider = ({ children }) => {
     return Array.isArray(expenses) ? expenses.filter((expense) => expense.budgetId === budgetId) : [];
   }
   
-  // MODIFIED: Add getBudget and getExpense functions
   function getBudget(id) {
     return Array.isArray(budgets) ? budgets.find(b => b.id === id) : undefined;
   }
@@ -117,7 +117,6 @@ export const BudgetsProvider = ({ children }) => {
     await deleteItemFromAPI("expenses", id, token);
   }
   
-  // MODIFIED: Add updateBudget and updateExpense functions
   async function updateBudget({ id, ...updates }) {
     if (!id) return;
     try {
@@ -152,10 +151,10 @@ export const BudgetsProvider = ({ children }) => {
     <BudgetsContext.Provider
       value={{
         budgets, expenses, monthlyCap,
-        getBudgetExpenses, getBudget, getExpense, // Added getBudget and getExpense
+        getBudgetExpenses, getBudget, getExpense,
         addExpense, addBudget,
         deleteBudget, deleteExpense,
-        updateBudget, updateExpense, // Added updateBudget and updateExpense
+        updateBudget, updateExpense,
         setMonthlyCapTotal,
       }}
     >
