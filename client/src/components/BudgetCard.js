@@ -9,7 +9,7 @@ export default function BudgetCard({
   hideButtons,
   onAddExpenseClick,
   onViewExpensesClick,
-  onEditBudgetClick, // MODIFIED: Added prop for edit click
+  onEditBudgetClick, // Prop for the new edit button handler
 }) {
   const classNames = []
   if (amount > max) {
