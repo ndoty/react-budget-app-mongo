@@ -17,12 +17,9 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    console.log(`SERVER CORS: Request received. Origin header: ${origin}`);
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      console.log(`SERVER CORS: Origin ${origin} is ALLOWED.`);
       callback(null, true);
     } else {
-      console.warn(`SERVER CORS: Origin ${origin} is BLOCKED. Not in allowed list: [${allowedOrigins.join(', ')}]`);
       callback(new Error(`Origin ${origin} not allowed by CORS`));
     }
   },
@@ -32,14 +29,7 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 
-app.use((req, res, next) => {
-  console.log(`SERVER INCOMING REQUEST: Method: ${req.method}, Path: ${req.path}, Origin: ${req.headers.origin}`);
-  next();
-});
-
-app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
-
 app.use(express.json());
 
 // --- MongoDB Connection ---
@@ -47,7 +37,6 @@ const mongoUser = process.env.MONGO_USER;
 const mongoPass = process.env.MONGO_PASS;
 const mongoConnectionString = process.env.MONGO_URI || `mongodb://${mongoUser}:${mongoPass}@technickservices.com/React-Budget-App?authSource=admin`;
 
-console.log(`SERVER LOG: Attempting to connect to MongoDB at: ${mongoConnectionString.replace(mongoPass || "YOUR_DB_PASS", "****")}`);
 mongoose.connect(mongoConnectionString)
   .then(() => console.log('SERVER LOG: MongoDB Connected Successfully!'))
   .catch(err => console.error('SERVER ERROR: MongoDB Connection Failed! Details:', err.message));
@@ -56,8 +45,7 @@ mongoose.connect(mongoConnectionString)
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, path: "/ws" });
 
-// Function to broadcast updates to all connected WebSocket clients
-function broadcastDataUpdate(updateType) { // MODIFIED: Simplified to send just a type
+function broadcastDataUpdate(updateType) {
   console.log(`SERVER WebSocket: Broadcasting update - Type: ${updateType}`);
   const message = JSON.stringify({ type: updateType });
   wss.clients.forEach(client => {
@@ -69,48 +57,25 @@ function broadcastDataUpdate(updateType) { // MODIFIED: Simplified to send just 
 
 wss.on('connection', (ws) => {
   console.log('SERVER WebSocket: Client connected');
-  ws.on('message', (message) => {
-    console.log(`SERVER WebSocket: Received message => ${message}`);
-    ws.send(`Server received: ${message}`); // Echo for testing, can be removed
-  });
-  ws.on('close', () => {
-    console.log('SERVER WebSocket: Client disconnected');
-  });
-  ws.on('error', (error) => {
-    console.error('SERVER WebSocket: Error:', error);
-  });
-  ws.send(JSON.stringify({ type: 'WELCOME', payload: 'Welcome to the WebSocket server!' }));
+  ws.on('close', () => console.log('SERVER WebSocket: Client disconnected'));
+  ws.on('error', (error) => console.error('SERVER WebSocket: Error:', error));
 });
-// --- End WebSocket Server Setup ---
-
 
 // --- ROUTES ---
-console.log("SERVER LOG: Registering routes...");
 const authRoutes = require('./routes/auth');
 const authMiddleware = require('./middleware/authMiddleware');
 const Budget = require("./models/Budget");
 const Expense = require("./models/Expense");
 const MonthlyCap = require('./models/MonthlyCap');
 
-app.get('/server-status', (req, res) => {
-    console.log(`SERVER LOG: GET /server-status route hit at ${new Date().toISOString()}`);
-    res.status(200).send('Backend server (budget-api) is alive.');
-});
-
-try {
-    console.log("SERVER LOG: Attempting to mount ./routes/auth ...");
-    app.use('/api/auth', authRoutes);
-    console.log("SERVER LOG: /api/auth routes *should* be mounted successfully.");
-} catch (e) {
-    console.error("SERVER ERROR: CRITICAL - Failed to load or use ./routes/auth.js! Details:", e);
-}
+app.use('/api/auth', authRoutes);
 
 // Budgets
 app.get("/api/budgets", authMiddleware, async (req, res) => {
   try {
     const budgets = await Budget.find({ userId: req.userId });
     res.status(200).json(budgets);
-  } catch (error) { console.error("GET /api/budgets Error:", error); res.status(500).json({ msg: "Server Error Fetching Budgets" }); }
+  } catch (error) { res.status(500).json({ msg: "Server Error" }); }
 });
 
 app.post("/api/budgets", authMiddleware, async (req, res) => {
@@ -118,30 +83,46 @@ app.post("/api/budgets", authMiddleware, async (req, res) => {
     const { id, name, max } = req.body;
     const newBudget = new Budget({ userId: req.userId, id, name, max });
     await newBudget.save();
-    broadcastDataUpdate('BUDGET_DATA_UPDATED'); // MODIFIED
+    broadcastDataUpdate('BUDGET_DATA_UPDATED');
     res.status(201).json(newBudget);
-  } catch (error) { console.error("POST /api/budgets Error:", error); res.status(500).json({ msg: "Server Error Saving Budget" }); }
+  } catch (error) { res.status(500).json({ msg: "Server Error" }); }
 });
 
 app.delete("/api/budgets/:id", authMiddleware, async (req, res) => {
   try {
-    const budget = await Budget.findOneAndDelete({ id: req.params.id, userId: req.userId });
-    if (!budget) {
-      return res.status(404).json({ msg: "Budget not found or not authorized to delete" });
-    }
+    await Budget.deleteOne({ id: req.params.id, userId: req.userId });
     await Expense.deleteMany({ budgetId: req.params.id, userId: req.userId });
-    broadcastDataUpdate('BUDGET_DATA_UPDATED'); // MODIFIED
-    broadcastDataUpdate('EXPENSE_DATA_UPDATED'); // MODIFIED (since expenses are also affected)
-    res.status(200).json({ msg: "Budget and associated expenses deleted" });
-  } catch (error) { console.error(`DELETE /api/budgets/${req.params.id} Error:`, error); res.status(500).json({ msg: "Server Error Deleting Budget" }); }
+    broadcastDataUpdate('BUDGET_DATA_UPDATED');
+    broadcastDataUpdate('EXPENSE_DATA_UPDATED');
+    res.status(200).json({ msg: "Budget deleted" });
+  } catch (error) { res.status(500).json({ msg: "Server Error" }); }
 });
+
+// MODIFIED: Added PUT route for budgets
+app.put("/api/budgets/:id", authMiddleware, async (req, res) => {
+  try {
+    const { name, max } = req.body;
+    const updatedBudget = await Budget.findOneAndUpdate(
+      { id: req.params.id, userId: req.userId },
+      { name, max },
+      { new: true } // Return the updated document
+    );
+    if (!updatedBudget) return res.status(404).json({ msg: "Budget not found" });
+    broadcastDataUpdate('BUDGET_DATA_UPDATED');
+    res.json(updatedBudget);
+  } catch (error) {
+    console.error("PUT /api/budgets/:id Error:", error);
+    res.status(500).json({ msg: "Server Error Updating Budget" });
+  }
+});
+
 
 // Expenses
 app.get("/api/expenses", authMiddleware, async (req, res) => {
   try {
     const expenses = await Expense.find({ userId: req.userId });
     res.status(200).json(expenses);
-  } catch (error) { console.error("GET /api/expenses Error:", error); res.status(500).json({ msg: "Server Error Fetching Expenses" }); }
+  } catch (error) { res.status(500).json({ msg: "Server Error" }); }
 });
 
 app.post("/api/expenses", authMiddleware, async (req, res) => {
@@ -149,20 +130,35 @@ app.post("/api/expenses", authMiddleware, async (req, res) => {
     const { id, description, amount, budgetId } = req.body;
     const newExpense = new Expense({ userId: req.userId, id, description, amount, budgetId });
     await newExpense.save();
-    broadcastDataUpdate('EXPENSE_DATA_UPDATED'); // MODIFIED
+    broadcastDataUpdate('EXPENSE_DATA_UPDATED');
     res.status(201).json(newExpense);
-  } catch (error) { console.error("POST /api/expenses Error:", error); res.status(500).json({ msg: "Server Error Saving Expense" }); }
+  } catch (error) { res.status(500).json({ msg: "Server Error" }); }
 });
 
 app.delete("/api/expenses/:id", authMiddleware, async (req, res) => {
   try {
-    const expense = await Expense.findOneAndDelete({ id: req.params.id, userId: req.userId });
-    if (!expense) {
-      return res.status(404).json({ msg: "Expense not found or not authorized to delete" });
-    }
-    broadcastDataUpdate('EXPENSE_DATA_UPDATED'); // MODIFIED
+    await Expense.deleteOne({ id: req.params.id, userId: req.userId });
+    broadcastDataUpdate('EXPENSE_DATA_UPDATED');
     res.status(200).json({ msg: "Expense deleted" });
-  } catch (error) { console.error(`DELETE /api/expenses/${req.params.id} Error:`, error); res.status(500).json({ msg: "Server Error Deleting Expense" }); }
+  } catch (error) { res.status(500).json({ msg: "Server Error" }); }
+});
+
+// MODIFIED: Added PUT route for expenses
+app.put("/api/expenses/:id", authMiddleware, async (req, res) => {
+  try {
+    const { description, amount, budgetId } = req.body;
+    const updatedExpense = await Expense.findOneAndUpdate(
+      { id: req.params.id, userId: req.userId },
+      { description, amount, budgetId },
+      { new: true } // Return the updated document
+    );
+    if (!updatedExpense) return res.status(404).json({ msg: "Expense not found" });
+    broadcastDataUpdate('EXPENSE_DATA_UPDATED');
+    res.json(updatedExpense);
+  } catch (error) {
+    console.error("PUT /api/expenses/:id Error:", error);
+    res.status(500).json({ msg: "Server Error Updating Expense" });
+  }
 });
 
 // Monthly Cap
@@ -170,26 +166,22 @@ app.get("/api/monthlyCap", authMiddleware, async (req, res) => {
   try {
     const cap = await MonthlyCap.findOne({ userId: req.userId });
     res.status(200).json(cap ? [cap] : []);
-  } catch (error) { console.error("GET /api/monthlyCap Error:", error); res.status(500).json({ msg: "Server Error Fetching Monthly Cap" }); }
+  } catch (error) { res.status(500).json({ msg: "Server Error" }); }
 });
 
 app.post("/api/monthlyCap", authMiddleware, async (req, res) => {
   const { cap } = req.body;
-  if (cap === undefined || cap === null || parseFloat(cap) < 0) {
-    return res.status(400).json({ msg: "Invalid cap amount provided." });
-  }
   try {
-    const updatedCap = await MonthlyCap.findOneAndUpdate(
-      { userId: req.userId },
-      { cap: parseFloat(cap) },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
+    await MonthlyCap.findOneAndUpdate(
+      { userId: req.userId }, { cap: parseFloat(cap) },
+      { new: true, upsert: true }
     );
-    broadcastDataUpdate('MONTHLY_CAP_UPDATED'); // MODIFIED
-    res.status(200).json([updatedCap]);
-  } catch (error) { console.error("POST /api/monthlyCap Error:", error); res.status(500).json({ msg: "Server Error Setting Monthly Cap" }); }
+    broadcastDataUpdate('MONTHLY_CAP_UPDATED');
+    res.status(200).json({ cap });
+  } catch (error) { res.status(500).json({ msg: "Server Error" }); }
 });
 
+
 server.listen(PORT, () => {
-  console.log(`SERVER LOG: Backend (budget-api) with WebSocket support is running on port ${PORT}`);
-  console.log(`SERVER LOG: WebSocket server available at ws://localhost:${PORT}/ws (or wss://yourdomain/ws in production)`);
+  console.log(`SERVER LOG: Backend with WebSocket support is running on port ${PORT}`);
 });

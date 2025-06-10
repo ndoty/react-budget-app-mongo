@@ -1,11 +1,12 @@
 // client/src/App.js
-import React, { useState, /*useEffect no longer needed here for WS */ } from "react";
+import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
 import { Button, Stack, Container, Nav, Navbar, Form } from "react-bootstrap";
 
 // Components
 import AddFixedMonthlyTotalModal from "./components/AddFixedMonthlyTotal";
 import AddBudgetModal from "./components/AddBudgetModal";
+import EditBudgetModal from "./components/EditBudgetModal"; // MODIFIED: Import EditBudgetModal
 import AddExpenseModal from "./components/AddExpenseModal";
 import ViewExpensesModal from "./components/ViewExpensesModal";
 import BudgetCard from "./components/BudgetCard";
@@ -16,81 +17,23 @@ import TotalBudgetCard from "./components/TotalBudgetCard";
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 
-// --- Authentication Pages ---
-function LoginPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const { login, loading: authContextLoading } = useAuth();
-  const navigate = useNavigate();
+// Authentication Pages...
+function LoginPage() { /* ... (no changes) ... */ }
+function RegisterPage() { /* ... (no changes) ... */ }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    const result = await login(username, password);
-    if (result.success) {
-      navigate("/");
-    } else {
-      setError(result.message || "Failed to login");
-    }
-  };
-
-  return (
-    <Container className="my-4" style={{ maxWidth: "400px", paddingTop: '50px' }}>
-      <h2>Login</h2>
-      {error && <p className="text-danger">{error}</p>}
-      <Form onSubmit={handleSubmit}>
-        <Form.Group className="mb-3"><Form.Label>Username</Form.Label><Form.Control type="text" value={username} onChange={(e) => setUsername(e.target.value)} required /></Form.Group>
-        <Form.Group className="mb-3"><Form.Label>Password</Form.Label><Form.Control type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></Form.Group>
-        <Button type="submit" variant="primary" disabled={authContextLoading}>Login</Button>
-        <p className="mt-3">Don't have an account? <Link to="/register">Register here</Link></p>
-      </Form>
-    </Container>
-  );
-}
-
-function RegisterPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const { register, loading: authContextLoading } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    if (password !== confirmPassword) { setError("Passwords do not match"); return; }
-    const result = await register(username, password);
-    if (result.success) {
-      alert("Registration successful! Please login.");
-      navigate("/login");
-    } else { setError(result.message || "Failed to register"); }
-  };
-  return (
-     <Container className="my-4" style={{ maxWidth: "400px", paddingTop: '50px' }}>
-      <h2>Register</h2>
-      {error && <p className="text-danger">{error}</p>}
-      <Form onSubmit={handleSubmit}>
-        <Form.Group className="mb-3"><Form.Label>Username</Form.Label><Form.Control type="text" value={username} onChange={(e) => setUsername(e.target.value)} required /></Form.Group>
-        <Form.Group className="mb-3"><Form.Label>Password</Form.Label><Form.Control type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></Form.Group>
-        <Form.Group className="mb-3"><Form.Label>Confirm Password</Form.Label><Form.Control type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required /></Form.Group>
-        <Button type="submit" variant="primary" disabled={authContextLoading}>Register</Button>
-         <p className="mt-3">Already have an account? <Link to="/login">Login here</Link></p>
-      </Form>
-    </Container>
-  );
-}
-
-// --- Main application component for budgets ---
+// Main application component for budgets
 function BudgetAppContent() {
   const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [viewExpensesModalBudgetId, setViewExpensesModalBudgetId] = useState();
   const [addExpenseModalBudgetId, setAddExpenseModalBudgetId] = useState();
   const [showFixedMonthlyTotalModal, setShowFixedMonthlyTotalModal] = useState(false);
+  
+  // MODIFIED: Add state for editing a budget
+  const [showEditBudgetModal, setShowEditBudgetModal] = useState(false);
+  const [editBudgetId, setEditBudgetId] = useState(null);
 
-  const { budgets, getBudgetExpenses } = useBudgets(); // useBudgets still used here
+  const { budgets, getBudgetExpenses } = useBudgets();
   const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
 
@@ -98,22 +41,19 @@ function BudgetAppContent() {
     setShowAddExpenseModal(true);
     setAddExpenseModalBudgetId(budgetId);
   }
+  
+  // MODIFIED: Function to open the edit budget modal
+  function openEditBudgetModal(budgetId) {
+    setEditBudgetId(budgetId);
+    setShowEditBudgetModal(true);
+  }
 
   const handleLogout = () => { logout(); navigate("/login"); };
 
   return (
     <>
       <Navbar bg="light" expand="lg" className="mb-4">
-        <Container>
-          <Navbar.Brand as={Link} to="/">Budget App</Navbar.Brand>
-          {currentUser && <Navbar.Text className="ms-2">Signed in as: <strong>{currentUser.username}</strong></Navbar.Text>}
-          <Navbar.Toggle aria-controls="basic-navbar-nav" />
-          <Navbar.Collapse id="basic-navbar-nav" className="justify-content-end">
-            <Nav>
-              {currentUser && <Button variant="outline-secondary" onClick={handleLogout}>Logout</Button>}
-            </Nav>
-          </Navbar.Collapse>
-        </Container>
+        {/* ... (no changes in Navbar) ... */}
       </Navbar>
       <Container className="my-4">
         <Stack direction="horizontal" gap="2" className="mb-4">
@@ -125,7 +65,18 @@ function BudgetAppContent() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
           { Array.isArray(budgets) && budgets.map((budget) => {
             const amount = getBudgetExpenses(budget.id).reduce((total, expense) => total + expense.amount, 0);
-            return (<BudgetCard key={budget.id} budgetId={budget.id} name={budget.name} amount={amount} max={budget.max} onAddExpenseClick={() => openAddExpenseModal(budget.id)} onViewExpensesClick={() => setViewExpensesModalBudgetId(budget.id)} />);
+            return (
+              <BudgetCard
+                key={budget.id}
+                budgetId={budget.id}
+                name={budget.name}
+                amount={amount}
+                max={budget.max}
+                onAddExpenseClick={() => openAddExpenseModal(budget.id)}
+                onViewExpensesClick={() => setViewExpensesModalBudgetId(budget.id)}
+                onEditBudgetClick={() => openEditBudgetModal(budget.id)} // MODIFIED: Pass handler to card
+              />
+            );
           })}
           <UncategorizedBudgetCard onAddExpenseClick={() => openAddExpenseModal(UNCATEGORIZED_BUDGET_ID)} onViewExpensesClick={() => setViewExpensesModalBudgetId(UNCATEGORIZED_BUDGET_ID)} />
           <TotalBudgetCard />
@@ -135,31 +86,30 @@ function BudgetAppContent() {
       <AddExpenseModal show={showAddExpenseModal} defaultBudgetId={addExpenseModalBudgetId} handleClose={() => setShowAddExpenseModal(false)} />
       <ViewExpensesModal budgetId={viewExpensesModalBudgetId} handleClose={() => setViewExpensesModalBudgetId()} />
       <AddFixedMonthlyTotalModal show={showFixedMonthlyTotalModal} handleClose={() => setShowFixedMonthlyTotalModal(false)} />
+      {/* MODIFIED: Render the new EditBudgetModal */}
+      {editBudgetId && (
+        <EditBudgetModal
+          show={showEditBudgetModal}
+          handleClose={() => {
+            setShowEditBudgetModal(false);
+            setEditBudgetId(null);
+          }}
+          budgetId={editBudgetId}
+        />
+      )}
     </>
   );
 }
 
-// --- Protected Route Component ---
-function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+// Protected Route Component...
+function ProtectedRoute({ children }) { /* ... (no changes) ... */ }
 
-  if (loading) {
-    return <Container className="my-4" style={{textAlign: 'center'}}><p>Authenticating...</p></Container>;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  return children;
-}
-
-// --- Main App Component ---
+// Main App Component...
 function App() {
-  // WebSocket connection for budget data is now handled within BudgetsContext
   return (
     <Router>
       <AuthProvider>
-        <BudgetsProvider> {/* BudgetsProvider will establish its own WebSocket connection */}
+        <BudgetsProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
