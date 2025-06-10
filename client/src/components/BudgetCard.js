@@ -18,8 +18,6 @@ export default function BudgetCard({
     classNames.push("bg-light")
   }
 
-  // The debugging console.log has been removed from this version.
-
   return (
     <Card className={classNames.join(" ")}>
       <Card.Body>
@@ -42,6 +40,12 @@ export default function BudgetCard({
             max={max}
             now={amount}
           />
+        )}
+        {/* MODIFIED: Added div to show remaining budget */}
+        {max && (
+          <div className="text-muted fs-6 mt-1 text-end">
+            {currencyFormatter.format(max - amount)} Remaining
+          </div>
         )}
         {!hideButtons && (
           <Stack direction="horizontal" gap="2" className="mt-4">
