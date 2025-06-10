@@ -1,13 +1,13 @@
 // client/src/components/ViewExpensesModal.js
-import { Modal, Button, Stack } from "react-bootstrap"; // Modal is imported
+import { Modal, Button, Stack } from "react-bootstrap";
 import { UNCATEGORIZED_BUDGET_ID, useBudgets } from "../contexts/BudgetsContext";
-import { currencyFormatter } from "../utils"; // Assuming utils.js exports this
+import { currencyFormatter } from "../utils";
 
-export default function ViewExpensesModal({ budgetId, handleClose }) {
+// MODIFIED: Added onEditExpenseClick to props
+export default function ViewExpensesModal({ budgetId, handleClose, onEditExpenseClick }) {
   const { getBudgetExpenses, budgets, deleteBudget, deleteExpense } = useBudgets();
 
-  // Ensure expenses are always an array, even if getBudgetExpenses might return null/undefined initially
-  const expenses = getBudgetExpenses(budgetId) || []; 
+  const expenses = getBudgetExpenses(budgetId) || [];
   
   const budget = budgetId === UNCATEGORIZED_BUDGET_ID
       ? { name: "Uncategorized", id: UNCATEGORIZED_BUDGET_ID }
@@ -22,7 +22,7 @@ export default function ViewExpensesModal({ budgetId, handleClose }) {
             {budgetId !== UNCATEGORIZED_BUDGET_ID && budget && (
               <Button
                 onClick={async () => {
-                  if (budget && budget.id) { // budget.id is the client-side UUID
+                  if (budget && budget.id) {
                     await deleteBudget({ id: budget.id }); 
                   }
                   handleClose();
@@ -43,8 +43,12 @@ export default function ViewExpensesModal({ budgetId, handleClose }) {
               <div className="fs-5">
                 {currencyFormatter.format(expense.amount)}
               </div>
+              {/* MODIFIED: Added Edit button for each expense */}
+              <Button onClick={() => onEditExpenseClick(expense.id)} size="sm" variant="outline-primary">
+                Edit
+              </Button>
               <Button
-                onClick={async () => await deleteExpense({ id: expense.id })} // expense.id is client-side UUID
+                onClick={async () => await deleteExpense({ id: expense.id })}
                 size="sm"
                 variant="outline-danger"
               >
