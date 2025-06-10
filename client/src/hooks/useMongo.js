@@ -1,11 +1,11 @@
 // client/src/hooks/useMongo.js
 import axios from "axios";
-import { useState, useEffect, useContext } from "react"; // Added useContext
-import { AuthContext, useAuth } from "../contexts/AuthContext"; // Import AuthContext directly for token access
+import { useState, useEffect } from "react"; // MODIFIED: Removed unused useContext
+import { useAuth } from "../contexts/AuthContext"; // MODIFIED: Removed unused AuthContext
 
 const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget-api.technickservices.com/api";
 
-// Helper function to get headers with token
+// ... (rest of the file is unchanged, the full version is below for reference)
 const getAuthHeaders = (token) => {
   if (token) {
     return { Authorization: `Bearer ${token}` };
@@ -13,7 +13,7 @@ const getAuthHeaders = (token) => {
   return {};
 };
 
-export const fetchDataFromAPI = async (key, token) => { // Pass token to the function
+export const fetchDataFromAPI = async (key, token) => {
   const targetUrl = `${API_URL_BASE}/${key}`;
   const headers = getAuthHeaders(token);
   console.log(`\n--- CLIENT useMongo: fetchDataFromAPI ---`);
@@ -22,7 +22,7 @@ export const fetchDataFromAPI = async (key, token) => { // Pass token to the fun
   console.log(`Request HEADERS for ${key}: ${JSON.stringify(headers)}`);
 
   try {
-    const response = await axios.get(targetUrl, { headers }); // Pass headers explicitly
+    const response = await axios.get(targetUrl, { headers });
     console.log(`CLIENT useMongo: fetchDataFromAPI for ${key} SUCCEEDED. Status: ${response.status}`);
     return response.data;
   } catch (error) {
@@ -43,7 +43,7 @@ export const fetchDataFromAPI = async (key, token) => { // Pass token to the fun
   }
 };
 
-export const postSingleItemToAPI = async (key, item, token) => { // Pass token
+export const postSingleItemToAPI = async (key, item, token) => {
   const targetUrl = `${API_URL_BASE}/${key}`;
   const headers = getAuthHeaders(token);
   console.log(`CLIENT useMongo: postSingleItemToAPI - Attempting to POST to ${targetUrl}`);
@@ -57,7 +57,7 @@ export const postSingleItemToAPI = async (key, item, token) => { // Pass token
   }
 };
 
-export const deleteItemFromAPI = async (key, itemId, token) => { // Pass token
+export const deleteItemFromAPI = async (key, itemId, token) => {
   const targetUrl = `${API_URL_BASE}/${key}/${itemId}`;
   const headers = getAuthHeaders(token);
   console.log(`CLIENT useMongo: deleteItemFromAPI - Attempting to DELETE from ${targetUrl}`);
@@ -71,7 +71,7 @@ export const deleteItemFromAPI = async (key, itemId, token) => { // Pass token
   }
 };
 
-export const postMonthlyCapToAPI = async (capData, token) => { // Pass token
+export const postMonthlyCapToAPI = async (capData, token) => {
   const targetUrl = `${API_URL_BASE}/monthlyCap`;
   const headers = getAuthHeaders(token);
   console.log(`CLIENT useMongo: postMonthlyCapToAPI - Attempting to POST to ${targetUrl}`);
@@ -87,18 +87,14 @@ export const postMonthlyCapToAPI = async (capData, token) => { // Pass token
 
 export default function useMongo(key, initialDefault = []) {
   const [value, setValue] = useState(initialDefault);
-  // Get token directly from AuthContext to pass to API functions
   const { isAuthenticated, loading: authLoading, token } = useAuth(); 
 
   useEffect(() => {
     const loadData = async () => {
-      if (isAuthenticated && token) { // Ensure token is also present
-        // console.log(`useMongo HOOK (${key}): Authenticated & token present. Fetching data...`);
-        // Pass the current token to fetchDataFromAPI
+      if (isAuthenticated && token) {
         const data = await fetchDataFromAPI(key, token); 
         setValue(Array.isArray(data) ? data : initialDefault);
       } else {
-        // console.log(`useMongo HOOK (${key}): Not Authenticated or no token. Clearing data.`);
         setValue(initialDefault);
       }
     };
@@ -108,7 +104,7 @@ export default function useMongo(key, initialDefault = []) {
     } else {
       setValue(initialDefault);
     }
-  }, [key, isAuthenticated, authLoading, token]); // Add token as a dependency
-
+  }, [key, isAuthenticated, authLoading, token, initialDefault]); // MODIFIED: Added initialDefault to dependency array
+  
   return [value, setValue];
 }
