@@ -1,98 +1,124 @@
-import { Button, Stack } from "react-bootstrap"
-import Container from "react-bootstrap/Container"
-import AddFixedMonthlyTotalModal from "./components/AddFixedMonthlyTotal"
-import AddBudgetModal from "./components/AddBudgetModal"
-import AddExpenseModal from "./components/AddExpenseModal"
-import ViewExpensesModal from "./components/ViewExpensesModal"
-import BudgetCard from "./components/BudgetCard"
-import UncategorizedBudgetCard from "./components/UncategorizedBudgetCard"
-import TotalBudgetCard from "./components/TotalBudgetCard"
-import { useState } from "react"
-import { UNCATEGORIZED_BUDGET_ID, useBudgets } from "./contexts/BudgetsContext"
+// client/src/App.js
+import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
+import { Button, Stack, Container, Nav, Navbar, Form } from "react-bootstrap";
 
-function App() {
-  const [showAddBudgetModal, setShowAddBudgetModal] = useState(false)
-  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false)
-  const [viewExpensesModalBudgetId, setViewExpensesModalBudgetId] = useState()
-  const [addExpenseModalBudgetId, setAddExpenseModalBudgetId] = useState()
-  const [showFixedMonthlyTotalModal, setShowFixedMonthlyTotalModal] = useState(false)
-  const { budgets, getBudgetExpenses } = useBudgets()
+// Components
+import AddFixedMonthlyTotalModal from "./components/AddFixedMonthlyTotal";
+import AddBudgetModal from "./components/AddBudgetModal";
+import EditBudgetModal from "./components/EditBudgetModal"; // MODIFIED: Import EditBudgetModal
+import AddExpenseModal from "./components/AddExpenseModal";
+import ViewExpensesModal from "./components/ViewExpensesModal";
+import BudgetCard from "./components/BudgetCard";
+import UncategorizedBudgetCard from "./components/UncategorizedBudgetCard";
+import TotalBudgetCard from "./components/TotalBudgetCard";
 
+// Contexts & Hooks
+import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
+import { useAuth, AuthProvider } from "./contexts/AuthContext";
+
+// Authentication Pages...
+function LoginPage() { /* ... (no changes) ... */ }
+function RegisterPage() { /* ... (no changes) ... */ }
+
+// Main application component for budgets
+function BudgetAppContent() {
+  const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
+  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
+  const [viewExpensesModalBudgetId, setViewExpensesModalBudgetId] = useState();
+  const [addExpenseModalBudgetId, setAddExpenseModalBudgetId] = useState();
+  const [showFixedMonthlyTotalModal, setShowFixedMonthlyTotalModal] = useState(false);
+  
+  // MODIFIED: Add state for editing a budget
+  const [showEditBudgetModal, setShowEditBudgetModal] = useState(false);
+  const [editBudgetId, setEditBudgetId] = useState(null);
+
+  const { budgets, getBudgetExpenses } = useBudgets();
+  const { logout, currentUser } = useAuth();
+  const navigate = useNavigate();
 
   function openAddExpenseModal(budgetId) {
-    setShowAddExpenseModal(true)
-    setAddExpenseModalBudgetId(budgetId)
+    setShowAddExpenseModal(true);
+    setAddExpenseModalBudgetId(budgetId);
   }
+  
+  // MODIFIED: Function to open the edit budget modal
+  function openEditBudgetModal(budgetId) {
+    setEditBudgetId(budgetId);
+    setShowEditBudgetModal(true);
+  }
+
+  const handleLogout = () => { logout(); navigate("/login"); };
 
   return (
     <>
+      <Navbar bg="light" expand="lg" className="mb-4">
+        {/* ... (no changes in Navbar) ... */}
+      </Navbar>
       <Container className="my-4">
         <Stack direction="horizontal" gap="2" className="mb-4">
           <h1 className="me-auto">Budgets</h1>
-          <Button variant="outline-primary" onClick={() => setShowFixedMonthlyTotalModal(true)}>
-            Add Monthly Cap
-          </Button>          
-          <Button variant="primary" onClick={() => setShowAddBudgetModal(true)}>
-            Add Budget
-          </Button>
-          <Button variant="outline-primary" onClick={openAddExpenseModal}>
-            Add Expense
-          </Button>
+          <Button variant="outline-primary" onClick={() => setShowFixedMonthlyTotalModal(true)}>Set Monthly Cap</Button>
+          <Button variant="primary" onClick={() => setShowAddBudgetModal(true)}>Add Budget</Button>
+          <Button variant="outline-primary" onClick={() => openAddExpenseModal()}>Add Expense</Button>
         </Stack>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            gap: "1rem",
-            alignItems: "flex-start",
-          }}
-        >
-          {budgets.map(budget => {
-            const amount = getBudgetExpenses(budget.id).reduce(
-              (total, expense) => total + expense.amount,
-              0
-            )
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
+          { Array.isArray(budgets) && budgets.map((budget) => {
+            const amount = getBudgetExpenses(budget.id).reduce((total, expense) => total + expense.amount, 0);
             return (
               <BudgetCard
                 key={budget.id}
+                budgetId={budget.id}
                 name={budget.name}
                 amount={amount}
                 max={budget.max}
                 onAddExpenseClick={() => openAddExpenseModal(budget.id)}
-                onViewExpensesClick={() =>
-                  setViewExpensesModalBudgetId(budget.id)
-                }
+                onViewExpensesClick={() => setViewExpensesModalBudgetId(budget.id)}
+                onEditBudgetClick={() => openEditBudgetModal(budget.id)} // MODIFIED: Pass handler to card
               />
-            )
+            );
           })}
-          <UncategorizedBudgetCard
-            onAddExpenseClick={openAddExpenseModal}
-            onViewExpensesClick={() =>
-              setViewExpensesModalBudgetId(UNCATEGORIZED_BUDGET_ID)
-            }
-          />
+          <UncategorizedBudgetCard onAddExpenseClick={() => openAddExpenseModal(UNCATEGORIZED_BUDGET_ID)} onViewExpensesClick={() => setViewExpensesModalBudgetId(UNCATEGORIZED_BUDGET_ID)} />
           <TotalBudgetCard />
         </div>
       </Container>
-      <AddBudgetModal
-        show={showAddBudgetModal}
-        handleClose={() => setShowAddBudgetModal(false)}
-      />
-      <AddExpenseModal
-        show={showAddExpenseModal}
-        defaultBudgetId={addExpenseModalBudgetId}
-        handleClose={() => setShowAddExpenseModal(false)}
-      />
-      <ViewExpensesModal
-        budgetId={viewExpensesModalBudgetId}
-        handleClose={() => setViewExpensesModalBudgetId()}
-      />
-      <AddFixedMonthlyTotalModal 
-        show={showFixedMonthlyTotalModal}
-        handleClose={() => setShowFixedMonthlyTotalModal(false)}
-      />
+      <AddBudgetModal show={showAddBudgetModal} handleClose={() => setShowAddBudgetModal(false)} />
+      <AddExpenseModal show={showAddExpenseModal} defaultBudgetId={addExpenseModalBudgetId} handleClose={() => setShowAddExpenseModal(false)} />
+      <ViewExpensesModal budgetId={viewExpensesModalBudgetId} handleClose={() => setViewExpensesModalBudgetId()} />
+      <AddFixedMonthlyTotalModal show={showFixedMonthlyTotalModal} handleClose={() => setShowFixedMonthlyTotalModal(false)} />
+      {/* MODIFIED: Render the new EditBudgetModal */}
+      {editBudgetId && (
+        <EditBudgetModal
+          show={showEditBudgetModal}
+          handleClose={() => {
+            setShowEditBudgetModal(false);
+            setEditBudgetId(null);
+          }}
+          budgetId={editBudgetId}
+        />
+      )}
     </>
-  )
+  );
 }
 
-export default App
+// Protected Route Component...
+function ProtectedRoute({ children }) { /* ... (no changes) ... */ }
+
+// Main App Component...
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <BudgetsProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/" element={ <ProtectedRoute> <BudgetAppContent /> </ProtectedRoute> } />
+            <Route path="*" element={ <Navigate to="/login" replace />} />
+          </Routes>
+        </BudgetsProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
+export default App;
