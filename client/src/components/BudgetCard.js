@@ -9,7 +9,7 @@ export default function BudgetCard({
   hideButtons,
   onAddExpenseClick,
   onViewExpensesClick,
-  onEditBudgetClick, // Prop for the new edit button handler
+  onEditBudgetClick, // Ensure this prop is listed here
 }) {
   const classNames = []
   if (amount > max) {
@@ -17,6 +17,9 @@ export default function BudgetCard({
   } else if (gray) {
     classNames.push("bg-light")
   }
+
+  // Add this console.log for debugging. This will tell us if the function is being passed in.
+  console.log(`Rendering BudgetCard for "${name}". The onEditBudgetClick prop is a: ${typeof onEditBudgetClick}`);
 
   return (
     <Card className={classNames.join(" ")}>
@@ -43,7 +46,7 @@ export default function BudgetCard({
         )}
         {!hideButtons && (
           <Stack direction="horizontal" gap="2" className="mt-4">
-            {/* MODIFIED: Added Edit Button */}
+            {/* Ensure this button exists */}
             <Button
               variant="outline-info"
               onClick={onEditBudgetClick}
