@@ -1,7 +1,7 @@
 // client/src/index.js
 import React from 'react';
 import ReactDOM from 'react-dom';
-import App from './App';
+import App from './App'; // This line requires a default export from App.js
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 // Optional: Log to verify REACT_APP_API_URL is picked up
