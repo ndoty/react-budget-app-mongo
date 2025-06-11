@@ -12,6 +12,7 @@ import ViewBillsModal from "./components/ViewBillsModal";
 import EditBudgetModal from "./components/EditBudgetModal";
 import EditExpenseModal from "./components/EditExpenseModal";
 import EditIncomeModal from "./components/EditIncomeModal";
+import MoveExpenseModal from "./components/MoveExpenseModal"; // Re-import this component
 import BudgetCard from "./components/BudgetCard";
 import UncategorizedBudgetCard from "./components/UncategorizedBudgetCard";
 import TotalBudgetCard from "./components/TotalBudgetCard";
@@ -129,6 +130,7 @@ function BudgetAppContent() {
   const [editIncomeModalId, setEditIncomeModalId] = useState();
   const [editExpenseId, setEditExpenseId] = useState();
   const [editBudgetModalId, setEditBudgetModalId] = useState();
+  const [moveExpenseModalId, setMoveExpenseModalId] = useState(); // State for Move Expense Modal
 
   const { budgets, getBudgetExpenses } = useBudgets();
   const { logout, currentUser } = useAuth();
@@ -148,7 +150,6 @@ function BudgetAppContent() {
     <>
       <Navbar bg="light" expand="lg" className="mb-4">
         <Container>
-          {/* MODIFIED: Renamed the application */}
           <Navbar.Brand as={Link} to="/">TechNick Services Budget App</Navbar.Brand>
           {currentUser && <Navbar.Text className="ms-2">Signed in as: <strong>{currentUser.username}</strong></Navbar.Text>}
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
@@ -161,7 +162,6 @@ function BudgetAppContent() {
       </Navbar>
       <Container className="my-4">
         <Stack direction="horizontal" gap="2" className="mb-4">
-          {/* MODIFIED: Removed the "Budgets" h1 title */}
           <h1 className="me-auto" style={{visibility: 'hidden'}}>Budgets</h1>
           <Button variant="primary" onClick={() => setShowAddBudgetModal(true)}>Add Budget</Button>
           <Button variant="success" onClick={() => setShowAddIncomeModal(true)}>Add Income</Button>
@@ -192,12 +192,17 @@ function BudgetAppContent() {
       <AddBudgetModal show={showAddBudgetModal} handleClose={() => setShowAddBudgetModal(false)} />
       <AddExpenseModal show={showAddExpenseModal} defaultBudgetId={addExpenseModalBudgetId} handleClose={() => setShowAddExpenseModal(false)} />
       <AddIncomeModal show={showAddIncomeModal} handleClose={() => setShowAddIncomeModal(false)} />
+      {/* MODIFIED: Added onMoveExpenseClick prop */}
       <ViewExpensesModal 
         budgetId={viewExpensesModalBudgetId} 
         handleClose={() => setViewExpensesModalBudgetId()}
         onEditExpenseClick={(id) => {
           setViewExpensesModalBudgetId();
           setEditExpenseId(id);
+        }}
+        onMoveExpenseClick={(id) => {
+          setViewExpensesModalBudgetId();
+          setMoveExpenseModalId(id);
         }}
       />
       <ViewIncomeModal 
@@ -230,6 +235,12 @@ function BudgetAppContent() {
         show={editIncomeModalId != null}
         handleClose={() => setEditIncomeModalId(null)}
         incomeId={editIncomeModalId}
+      />
+      {/* MODIFIED: Render the MoveExpenseModal */}
+      <MoveExpenseModal
+        show={moveExpenseModalId != null}
+        handleClose={() => setMoveExpenseModalId(null)}
+        expenseId={moveExpenseModalId}
       />
     </>
   );
