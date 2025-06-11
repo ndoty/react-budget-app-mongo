@@ -6,11 +6,17 @@ export default function ViewBillsModal({ show, handleClose, onEditExpenseClick }
   const { getBillExpenses, deleteExpense } = useBudgets();
 
   const billExpenses = getBillExpenses();
-  
-  // MODIFIED: Revert sorting logic to a simple numeric sort on the dueDate
+  // MODIFIED: Improved sorting to handle missing due dates and sort by day number
   const sortedBillExpenses = [...billExpenses].sort((a, b) => {
+    // Bills without a due date go to the end
+    if (a.dueDate == null) return 1;
+    if (b.dueDate == null) return -1;
+
+    // Sort by the day number
     if (a.dueDate < b.dueDate) return -1;
     if (a.dueDate > b.dueDate) return 1;
+
+    // As a fallback, sort by description
     return a.description.localeCompare(b.description);
   });
 
@@ -25,7 +31,6 @@ export default function ViewBillsModal({ show, handleClose, onEditExpenseClick }
             <Stack direction="horizontal" gap="2" key={expense.id}>
               <div className="me-auto">
                   <div className="fs-4">{expense.description}</div>
-                  {/* MODIFIED: Revert display to show the day of the month */}
                   {expense.dueDate && (
                     <div className="text-muted fs-6">Due on day: {expense.dueDate}</div>
                   )}
