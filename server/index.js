@@ -108,7 +108,8 @@ app.delete("/api/budgets/:id", authMiddleware, async (req, res) => {
 // Expenses Routes
 app.get("/api/expenses", authMiddleware, async (req, res) => {
   try {
-    const expenses = await Expense.find({ userId: req.userId });
+    // MODIFIED: Sort by createdAt field, newest first
+    const expenses = await Expense.find({ userId: req.userId }).sort({ createdAt: -1 });
     res.status(200).json(expenses);
   } catch (error) { console.error("GET /api/expenses Error:", error); res.status(500).json({ msg: "Server Error" }); }
 });
@@ -122,7 +123,6 @@ app.post("/api/expenses", authMiddleware, async (req, res) => {
 });
 app.put("/api/expenses/:id", authMiddleware, async (req, res) => {
   try {
-    // MODIFIED: Added dueDate to the destructuring and update object
     const { description, amount, budgetId, isBill, dueDate } = req.body;
     const updatedExpense = await Expense.findOneAndUpdate(
       { id: req.params.id, userId: req.userId }, 
@@ -143,7 +143,6 @@ app.delete("/api/expenses/:id", authMiddleware, async (req, res) => {
 });
 
 // Income Routes
-// ... (no changes to income routes)
 app.get("/api/income", authMiddleware, async (req, res) => {
   try {
     const income = await Income.find({ userId: req.userId }).sort({ date: -1 });
