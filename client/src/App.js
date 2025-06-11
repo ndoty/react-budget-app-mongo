@@ -132,4 +132,98 @@ function BudgetAppContent() {
       <Container className="my-4">
         <Stack direction="horizontal" gap="2" className="mb-4">
           <h1 className="me-auto">Budgets</h1>
-          <Button variant="outline-primary" onClick
+          <Button variant="outline-primary" onClick={() => setShowFixedMonthlyTotalModal(true)}>Set Monthly Cap</Button>
+          <Button variant="primary" onClick={() => setShowAddBudgetModal(true)}>Add Budget</Button>
+          <Button variant="outline-primary" onClick={() => openAddExpenseModal()}>Add Expense</Button>
+          <Button variant="success" onClick={() => setShowAddIncomeModal(true)}>Add Income</Button>
+        </Stack>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
+          { Array.isArray(budgets) && budgets.map((budget) => {
+            const amount = getBudgetExpenses(budget.id).reduce((total, expense) => total + expense.amount, 0);
+            return (
+              <BudgetCard
+                key={budget.id}
+                name={budget.name}
+                amount={amount}
+                max={budget.max}
+                onAddExpenseClick={() => openAddExpenseModal(budget.id)}
+                onViewExpensesClick={() => setViewExpensesModalBudgetId(budget.id)}
+                onEditBudgetClick={() => openEditBudgetModal(budget.id)}
+              />
+            );
+          })}
+          <UncategorizedBudgetCard onAddExpenseClick={() => openAddExpenseModal(UNCATEGORIZED_BUDGET_ID)} onViewExpensesClick={() => setViewExpensesModalBudgetId(UNCATEGORIZED_BUDGET_ID)} />
+          <IncomeCard />
+          <TotalBudgetCard />
+        </div>
+      </Container>
+
+      {/* --- Modals --- */}
+      <AddBudgetModal show={showAddBudgetModal} handleClose={() => setShowAddBudgetModal(false)} />
+      <AddIncomeModal show={showAddIncomeModal} handleClose={() => setShowAddIncomeModal(false)} />
+      <AddExpenseModal show={showAddExpenseModal} defaultBudgetId={addExpenseModalBudgetId} handleClose={() => setShowAddExpenseModal(false)} />
+      <AddFixedMonthlyTotalModal show={showFixedMonthlyTotalModal} handleClose={() => setShowFixedMonthlyTotalModal(false)} />
+      
+      <ViewExpensesModal
+        budgetId={viewExpensesModalBudgetId}
+        handleClose={() => setViewExpensesModalBudgetId(null)} // MODIFIED
+        onEditExpenseClick={openEditExpenseModal}
+        onMoveExpenseClick={openMoveExpenseModal}
+      />
+      
+      {/* Use truthiness of the ID to conditionally render modals, and always pass a function that sets state to null */}
+      {editBudgetId && (
+        <EditBudgetModal
+          show={showEditBudgetModal}
+          handleClose={() => { setShowEditBudgetModal(false); setEditBudgetId(null); }}
+          budgetId={editBudgetId}
+        />
+      )}
+      {editExpenseId && (
+        <EditExpenseModal
+          show={showEditExpenseModal}
+          handleClose={() => { setShowEditExpenseModal(false); setEditExpenseId(null); }}
+          expenseId={editExpenseId}
+        />
+      )}
+      {moveExpenseId && (
+        <MoveExpenseModal
+          show={showMoveExpenseModal}
+          handleClose={() => { setShowMoveExpenseModal(false); setMoveExpenseId(null); }}
+          expenseId={moveExpenseId}
+        />
+      )}
+    </>
+  );
+}
+
+// --- Protected Route Component ---
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) {
+    return <Container className="my-4" style={{textAlign: 'center'}}><p>Authenticating...</p></Container>;
+  }
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+// --- Main App Component ---
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <BudgetsProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/" element={ <ProtectedRoute> <BudgetAppContent /> </ProtectedRoute> } />
+            <Route path="*" element={ <Navigate to="/login" replace />} />
+          </Routes>
+        </BudgetsProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
+export default App;
