@@ -1,3 +1,4 @@
+// client/src/contexts/BudgetsContext.js
 import React, { createContext, useContext, useEffect } from "react";
 import { Container } from "react-bootstrap";
 import { v4 as uuidV4 } from "uuid";
@@ -7,7 +8,6 @@ import useMongo, {
   postSingleItemToAPI,
   deleteItemFromAPI,
   fetchDataFromAPI
-  // MODIFIED: Removed unused postMonthlyCapToAPI
 } from "../hooks/useMongo";
 import { useAuth } from "./AuthContext";
 
@@ -33,8 +33,6 @@ export const BudgetsProvider = ({ children }) => {
   const [budgets, setBudgets] = useMongo("budgets", defaultBudgets);
   const [expenses, setExpenses] = useMongo("expenses", defaultExpenses);
   const [income, setIncome] = useMongo("income", defaultIncome);
-  // MODIFIED: Removed monthlyCap state
-  // const [monthlyCap, setMonthlyCap] = useMongo("monthlyCap", defaultMonthlyCap);
 
   useEffect(() => {
     if (!isAuthenticated || !token || authLoading) return;
@@ -73,7 +71,6 @@ export const BudgetsProvider = ({ children }) => {
         setExpenses(Array.isArray(expensesData) ? expensesData : []);
         const incomeData = await fetchDataFromAPI("income", token);
         setIncome(Array.isArray(incomeData) ? incomeData : []);
-        // MODIFIED: Removed monthlyCap fetch
       }
     };
 
@@ -91,7 +88,7 @@ export const BudgetsProvider = ({ children }) => {
         socket.close();
       }
     };
-  }, [isAuthenticated, token, authLoading, setBudgets, setExpenses, setIncome]); // MODIFIED: Removed setMonthlyCap
+  }, [isAuthenticated, token, authLoading, setBudgets, setExpenses, setIncome]);
 
   function getBudgetExpenses(budgetId) { return Array.isArray(expenses) ? expenses.filter((expense) => expense.budgetId === budgetId) : []; }
   function getBudget(id) { return Array.isArray(budgets) ? budgets.find(b => b.id === id) : undefined; }
@@ -108,7 +105,6 @@ export const BudgetsProvider = ({ children }) => {
   async function addIncome({ description, amount }) { await postSingleItemToAPI("income", { id: uuidV4(), description, amount }, token); }
   async function deleteIncome({ id }) { await deleteItemFromAPI("income", id, token); }
   async function updateIncome({ id, ...updates }) { if (!id) return; try { await axios.put(`${API_URL_BASE}/income/${id}`, updates, { headers: { Authorization: `Bearer ${token}` } }); } catch (error) { console.error("Failed to update income:", error); } }
-  // MODIFIED: Removed setMonthlyCapTotal function
 
   if (authLoading) {
     return <Container className="my-4"><p>Loading User Data...</p></Container>;
@@ -120,7 +116,6 @@ export const BudgetsProvider = ({ children }) => {
         budgets,
         expenses,
         income,
-        // MODIFIED: Removed monthlyCap
         getBudgetExpenses,
         getBudget,
         getExpense,
@@ -134,7 +129,7 @@ export const BudgetsProvider = ({ children }) => {
         addIncome,
         deleteIncome,
         updateIncome,
-        // MODIFIED: Removed setMonthlyCapTotal
+        UNCATEGORIZED_BUDGET_ID, // MODIFIED: Expose the constant
       }}
     >
       {children}
