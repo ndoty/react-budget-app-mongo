@@ -57,8 +57,28 @@ function broadcastDataUpdate(updateType) {
 
 wss.on('connection', (ws) => {
   console.log('SERVER WebSocket: Client connected');
+  
+  // MODIFIED: Heartbeat logic
+  ws.isAlive = true;
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
+
   ws.on('close', () => console.log('SERVER WebSocket: Client disconnected'));
   ws.on('error', (error) => console.error('SERVER WebSocket: Error:', error));
+});
+
+// MODIFIED: Ping clients every 30 seconds to keep connections alive
+const interval = setInterval(function ping() {
+  wss.clients.forEach(function each(ws) {
+    if (ws.isAlive === false) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
+wss.on('close', function close() {
+  clearInterval(interval);
 });
 
 // --- ROUTES ---
@@ -108,7 +128,6 @@ app.delete("/api/budgets/:id", authMiddleware, async (req, res) => {
 // Expenses Routes
 app.get("/api/expenses", authMiddleware, async (req, res) => {
   try {
-    // MODIFIED: Sort by updatedAt field to show most recent activity first
     const expenses = await Expense.find({ userId: req.userId }).sort({ updatedAt: -1 });
     res.status(200).json(expenses);
   } catch (error) { console.error("GET /api/expenses Error:", error); res.status(500).json({ msg: "Server Error" }); }
