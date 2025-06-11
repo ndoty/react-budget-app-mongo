@@ -20,7 +20,8 @@ import UncategorizedBudgetCard from "./components/UncategorizedBudgetCard";
 import TotalBudgetCard from "./components/TotalBudgetCard";
 
 // Contexts & Hooks
-import { UNCATEGORIZED_BUDGET_ID, BudgetsProvider } from "./contexts/BudgetsContext";
+// MODIFIED: Added useBudgets back to the import list
+import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 
 // --- Authentication Pages ---
@@ -111,6 +112,7 @@ function BudgetAppContent() {
   const [showEditIncomeModal, setShowEditIncomeModal] = useState(false);
   const [editIncomeId, setEditIncomeId] = useState(null);
 
+  // This line requires 'useBudgets' to be imported
   const { budgets, getBudgetExpenses } = useBudgets();
   const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
@@ -178,34 +180,16 @@ function BudgetAppContent() {
         onMoveExpenseClick={openMoveExpenseModal}
       />
       
-      {/* MODIFIED: Use truthiness of the ID state to conditionally render modals */}
-      {editBudgetId && (
-        <EditBudgetModal
-          show={showEditBudgetModal}
-          handleClose={() => { setShowEditBudgetModal(false); setEditBudgetId(null); }}
-          budgetId={editBudgetId}
-        />
-      )}
-      {editExpenseId && (
-        <EditExpenseModal
-          show={showEditExpenseModal}
-          handleClose={() => { setShowEditExpenseModal(false); setEditExpenseId(null); }}
-          expenseId={editExpenseId}
-        />
-      )}
-      {moveExpenseId && (
-        <MoveExpenseModal
-          show={showMoveExpenseModal}
-          handleClose={() => { setShowMoveExpenseModal(false); setMoveExpenseId(null); }}
-          expenseId={moveExpenseId}
-        />
-      )}
-      {/* MODIFIED: Add handlers for the new income modals */}
       <ViewIncomeModal 
         show={showViewIncomeModal} 
         handleClose={() => setShowViewIncomeModal(false)}
         onEditIncomeClick={openEditIncomeModal}
       />
+
+      {editBudgetId && ( <EditBudgetModal show={showEditBudgetModal} handleClose={() => { setShowEditBudgetModal(false); setEditBudgetId(null); }} budgetId={editBudgetId} /> )}
+      {editExpenseId && ( <EditExpenseModal show={showEditExpenseModal} handleClose={() => { setShowEditExpenseModal(false); setEditExpenseId(null); }} expenseId={editExpenseId} /> )}
+      {moveExpenseId && ( <MoveExpenseModal show={showMoveExpenseModal} handleClose={() => { setShowMoveExpenseModal(false); setMoveExpenseId(null); }} expenseId={moveExpenseId} /> )}
+      
       {editIncomeId && (
         <EditIncomeModal
           show={showEditIncomeModal}
