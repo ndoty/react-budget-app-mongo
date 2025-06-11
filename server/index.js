@@ -67,8 +67,6 @@ const authMiddleware = require('./middleware/authMiddleware');
 const Budget = require("./models/Budget");
 const Expense = require("./models/Expense");
 const Income = require('./models/Income');
-// MODIFIED: Removed MonthlyCap model import
-// const MonthlyCap = require('./models/MonthlyCap');
 
 app.use('/api/auth', authRoutes);
 app.get('/server-status', (req, res) => res.status(200).send('Backend server (budget-api) is alive.'));
@@ -124,8 +122,13 @@ app.post("/api/expenses", authMiddleware, async (req, res) => {
 });
 app.put("/api/expenses/:id", authMiddleware, async (req, res) => {
   try {
-    const { description, amount, budgetId } = req.body;
-    const updatedExpense = await Expense.findOneAndUpdate({ id: req.params.id, userId: req.userId }, { description, amount, budgetId }, { new: true });
+    // MODIFIED: Include isBill in the destructured properties from the request body
+    const { description, amount, budgetId, isBill } = req.body;
+    const updatedExpense = await Expense.findOneAndUpdate(
+      { id: req.params.id, userId: req.userId }, 
+      { description, amount, budgetId, isBill }, // Pass isBill to the update
+      { new: true }
+    );
     if (!updatedExpense) return res.status(404).json({ msg: "Expense not found" });
     broadcastDataUpdate('EXPENSE_DATA_UPDATED');
     res.json(updatedExpense);
@@ -177,10 +180,6 @@ app.put("/api/income/:id", authMiddleware, async (req, res) => {
     res.status(500).json({ msg: "Server Error Updating Income" });
   }
 });
-
-// MODIFIED: Removed Monthly Cap routes
-// app.get("/api/monthlyCap", ...);
-// app.post("/api/monthlyCap", ...);
 
 
 server.listen(PORT, () => {
