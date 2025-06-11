@@ -6,15 +6,19 @@ export default function EditExpenseModal({ show, handleClose, expenseId }) {
   const descriptionRef = useRef();
   const amountRef = useRef();
   const budgetIdRef = useRef();
+  const isBillRef = useRef(); // MODIFIED: Add ref for the checkbox
   const { updateExpense, getExpense, budgets } = useBudgets();
   const expense = getExpense(expenseId);
 
-  // Set form values when the expense object is available
   useEffect(() => {
     if (expense) {
       descriptionRef.current.value = expense.description;
       amountRef.current.value = expense.amount;
       budgetIdRef.current.value = expense.budgetId;
+      // MODIFIED: Set the checkbox state
+      if (isBillRef.current) {
+        isBillRef.current.checked = expense.isBill || false;
+      }
     }
   }, [expense]);
 
@@ -25,6 +29,7 @@ export default function EditExpenseModal({ show, handleClose, expenseId }) {
       description: descriptionRef.current.value,
       amount: parseFloat(amountRef.current.value),
       budgetId: budgetIdRef.current.value,
+      isBill: isBillRef.current.checked, // MODIFIED: Pass the checkbox value
     });
     handleClose();
   }
@@ -59,6 +64,15 @@ export default function EditExpenseModal({ show, handleClose, expenseId }) {
                 </option>
               ))}
             </Form.Select>
+          </Form.Group>
+          {/* MODIFIED: Add checkbox for marking as a bill */}
+          <Form.Group className="mb-3" controlId="isBill">
+            <Form.Check
+              type="checkbox"
+              ref={isBillRef}
+              label="Is this a recurring bill?"
+              defaultChecked={expense?.isBill || false}
+            />
           </Form.Group>
           <div className="d-flex justify-content-end">
             <Button variant="primary" type="submit">
