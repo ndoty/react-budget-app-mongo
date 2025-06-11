@@ -122,10 +122,11 @@ app.post("/api/expenses", authMiddleware, async (req, res) => {
 });
 app.put("/api/expenses/:id", authMiddleware, async (req, res) => {
   try {
-    const { description, amount, budgetId, isBill } = req.body;
+    // MODIFIED: Added dueDate to the destructuring and update object
+    const { description, amount, budgetId, isBill, dueDate } = req.body;
     const updatedExpense = await Expense.findOneAndUpdate(
       { id: req.params.id, userId: req.userId }, 
-      { description, amount, budgetId, isBill: !!isBill }, 
+      { description, amount, budgetId, isBill: !!isBill, dueDate }, 
       { new: true }
     );
     if (!updatedExpense) return res.status(404).json({ msg: "Expense not found" });
