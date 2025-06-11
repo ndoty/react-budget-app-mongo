@@ -1,4 +1,3 @@
-// client/src/contexts/BudgetsContext.js
 import React, { createContext, useContext, useEffect } from "react";
 import { Container } from "react-bootstrap";
 import { v4 as uuidV4 } from "uuid";
@@ -12,7 +11,6 @@ import useMongo, {
 
 import { useAuth } from "./AuthContext";
 
-// Define the empty array outside the component to ensure it has a stable reference.
 const EMPTY_ARRAY = [];
 
 const BudgetsContext = createContext(undefined);
@@ -31,7 +29,6 @@ export function useBudgets() {
 export const BudgetsProvider = ({ children }) => {
   const { isAuthenticated, loading: authLoading, token } = useAuth();
 
-  // Use the stable EMPTY_ARRAY constant for the initial value.
   const [budgets, setBudgets] = useMongo("budgets", EMPTY_ARRAY);
   const [expenses, setExpenses] = useMongo("expenses", EMPTY_ARRAY);
   const [income, setIncome] = useMongo("income", EMPTY_ARRAY);
@@ -49,22 +46,29 @@ export const BudgetsProvider = ({ children }) => {
       ? expenses.filter((expense) => expense.budgetId === budgetId)
       : [];
   }
+  
+  // This function filters expenses based on the isBill flag
+  function getBillExpenses() {
+    return Array.isArray(expenses)
+      ? expenses.filter((expense) => expense.isBill)
+      : [];
+  }
     
   function getIncomeItem(incomeId) {
     return Array.isArray(income) ? income.find((i) => i.id === incomeId) : undefined;
   }
     
   function getBudget(budgetId) {
-    return Array.isArray(budgets) ? budgets.find((b) => b.id === budgetId) : undefined;
+      return Array.isArray(budgets) ? budgets.find((b) => b.id === budgetId) : undefined;
   }
   
   function getExpense(expenseId) {
     return Array.isArray(expenses) ? expenses.find(e => e.id === expenseId) : undefined;
   }
 
-  async function addExpense({ description, amount, budgetId }) {
+  async function addExpense({ description, amount, budgetId, isBill }) {
     if (!isAuthenticated || !token) return;
-    const newExpense = { id: uuidV4(), description, amount, budgetId };
+    const newExpense = { id: uuidV4(), description, amount, budgetId, isBill };
     const savedExpense = await postSingleItemToAPI("expenses", newExpense, token);
     if (savedExpense) {
       setExpenses((prev) => [...(Array.isArray(prev) ? prev : []), savedExpense]);
@@ -154,6 +158,7 @@ export const BudgetsProvider = ({ children }) => {
         expenses,
         income,
         getBudgetExpenses,
+        getBillExpenses, // Ensure this is included in the value
         getIncomeItem,
         getBudget,
         getExpense,
@@ -166,7 +171,6 @@ export const BudgetsProvider = ({ children }) => {
         updateBudget,
         updateExpense,
         updateIncome,
-        BILLS_BUDGET_ID,
         UNCATEGORIZED_BUDGET_ID,
       }}
     >
