@@ -33,6 +33,6 @@ const expenseSchema = new mongoose.Schema({
     max: 31,
     required: false,
   },
-});
+}, { timestamps: true }); // MODIFIED: Added timestamps option
 
 module.exports = mongoose.model("Expense", expenseSchema);
