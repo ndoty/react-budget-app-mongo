@@ -1,14 +1,16 @@
-// client/src/components/TotalBudgetCard.js
 import { Button, Card, Stack } from "react-bootstrap";
 import { currencyFormatter } from "../utils";
 import { useBudgets } from "../contexts/BudgetsContext";
 
-// MODIFIED: Added onViewIncomeClick prop
-export default function TotalBudgetCard({ onViewIncomeClick }) {
-  const { expenses, income, budgets, getBudgetExpenses, UNCATEGORIZED_BUDGET_ID } = useBudgets();
+export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick }) {
+  const { expenses, income, budgets, getBudgetExpenses, getBillExpenses, UNCATEGORIZED_BUDGET_ID } = useBudgets();
 
-  // --- Calculations (no changes here) ---
+  // --- Calculations ---
   const totalIncome = (income || []).reduce((total, item) => total + item.amount, 0);
+  const totalExpenses = (expenses || []).reduce((total, expense) => total + expense.amount, 0);
+  const totalBills = (getBillExpenses() || []).reduce((total, expense) => total + expense.amount, 0);
+  
+  // This calculation seems specific to your logic, leaving it as is.
   const totalObligationFromBudgets = (budgets || []).reduce((total, budget) => {
     const spentInBudget = getBudgetExpenses(budget.id).reduce((sum, expense) => sum + expense.amount, 0);
     return total + Math.max(spentInBudget, budget.max);
@@ -29,8 +31,7 @@ export default function TotalBudgetCard({ onViewIncomeClick }) {
 
   // --- Render Logic ---
   if (totalIncome === 0 && totalAmountToSubtract === 0) {
-    // Also show the card if there are budgets, so the user can see their plan
-    if (budgets.length === 0) return null;
+    if ((budgets || []).length === 0) return null;
   }
 
   return (
@@ -43,7 +44,6 @@ export default function TotalBudgetCard({ onViewIncomeClick }) {
           </div>
         </Card.Title>
         <hr />
-        {/* MODIFIED: Updated the breakdown display */}
         <Stack direction="vertical" gap="2" className="mt-2">
             <div className="d-flex justify-content-between">
                 <span>Total Income:</span>
@@ -54,14 +54,25 @@ export default function TotalBudgetCard({ onViewIncomeClick }) {
                 <span>{currencyFormatter.format((budgets || []).reduce((total, budget) => total + budget.max, 0))}</span>
             </div>
             <div className="d-flex justify-content-between">
+                <span>Total Bills:</span>
+                <span className="text-danger">
+                  - {currencyFormatter.format(totalBills)}
+                </span>
+            </div>
+            <div className="d-flex justify-content-between">
                 <span>Total Spent:</span>
                 <span className="text-danger">
-                  - {currencyFormatter.format((expenses || []).reduce((total, expense) => total + expense.amount, 0))}
+                  - {currencyFormatter.format(totalExpenses)}
                 </span>
             </div>
         </Stack>
-        {/* MODIFIED: Added a button to view income details */}
         <Stack direction="horizontal" gap="2" className="mt-4">
+          <Button
+            variant="outline-danger"
+            onClick={onViewBillsClick}
+          >
+            View Bills
+          </Button>
           <Button
             variant="outline-success"
             className="ms-auto"
