@@ -3,29 +3,38 @@ import { currencyFormatter } from "../utils";
 import { useBudgets } from "../contexts/BudgetsContext";
 
 export default function TotalBudgetCard() {
-  const { expenses, income } = useBudgets();
+  const { expenses, income, budgets } = useBudgets();
 
-  // Calculate total expenses and total income
-  const totalExpenses = expenses.reduce((total, expense) => total + expense.amount, 0);
-  const totalIncome = income.reduce((total, item) => total + item.amount, 0);
+  // 1. Calculate all the totals
+  const totalExpenses = expenses.reduce(
+    (total, expense) => total + expense.amount, 0
+  );
+  const totalIncome = income.reduce(
+    (total, item) => total + item.amount, 0
+  );
+  const totalBudgetMax = budgets.reduce(
+    (total, budget) => total + budget.max, 0
+  );
 
-  // Calculate the final balance
-  const balance = totalIncome - totalExpenses;
+  // 2. Determine the amount to subtract based on your logic
+  // Use the actual expenses or the total budgeted amount, whichever is higher.
+  const amountToSubtract = Math.max(totalExpenses, totalBudgetMax);
 
-  // Determine the card style based on whether the balance is positive or negative
+  // 3. Calculate the final balance
+  const balance = totalIncome - amountToSubtract;
+
+  // Determine card style based on whether the final balance is positive or negative
   const cardStyle = {};
   if (balance < 0) {
-    // Apply a light red style for a negative balance
     cardStyle.backgroundColor = 'rgba(255, 0, 0, 0.1)';
     cardStyle.borderColor = 'rgba(255, 0, 0, 0.2)';
   } else {
-    // Apply a light green style for a positive or zero balance
     cardStyle.backgroundColor = 'rgba(0, 255, 0, 0.1)';
     cardStyle.borderColor = 'rgba(0, 255, 0, 0.2)';
   }
 
-  // Do not render the card at all if there has been no financial activity
-  if (totalIncome === 0 && totalExpenses === 0) {
+  // Do not render the card if there is no financial activity at all
+  if (totalIncome === 0 && totalExpenses === 0 && totalBudgetMax === 0) {
     return null;
   }
 
@@ -43,9 +52,10 @@ export default function TotalBudgetCard() {
                 <span>Total Income:</span>
                 <span style={{color: "green"}}>{currencyFormatter.format(totalIncome)}</span>
             </div>
+            {/* Display the value that is being subtracted (the higher of spent or budgeted) */}
             <div className="d-flex justify-content-between">
-                <span>Total Expenses:</span>
-                <span style={{color: "red"}}>{currencyFormatter.format(totalExpenses)}</span>
+                <span>Budgeted/Spent:</span>
+                <span style={{color: "red"}}>- {currencyFormatter.format(amountToSubtract)}</span>
             </div>
         </Stack>
       </Card.Body>
