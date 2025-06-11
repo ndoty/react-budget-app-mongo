@@ -4,22 +4,27 @@ import { useBudgets } from "../contexts/BudgetsContext";
 
 export default function TotalBudgetCard() {
   const { expenses, income } = useBudgets();
+
+  // Calculate total expenses and total income
   const totalExpenses = expenses.reduce((total, expense) => total + expense.amount, 0);
   const totalIncome = income.reduce((total, item) => total + item.amount, 0);
 
+  // Calculate the final balance
   const balance = totalIncome - totalExpenses;
 
-  // Determine card style based on the balance
+  // Determine the card style based on whether the balance is positive or negative
   const cardStyle = {};
   if (balance < 0) {
-    cardStyle.backgroundColor = 'rgba(255, 0, 0, 0.1)'; // Light red for negative balance
+    // Apply a light red style for a negative balance
+    cardStyle.backgroundColor = 'rgba(255, 0, 0, 0.1)';
     cardStyle.borderColor = 'rgba(255, 0, 0, 0.2)';
   } else {
-    cardStyle.backgroundColor = 'rgba(0, 255, 0, 0.1)'; // Light green for positive balance
+    // Apply a light green style for a positive or zero balance
+    cardStyle.backgroundColor = 'rgba(0, 255, 0, 0.1)';
     cardStyle.borderColor = 'rgba(0, 255, 0, 0.2)';
   }
 
-  // Do not render the card if there is no activity at all
+  // Do not render the card at all if there has been no financial activity
   if (totalIncome === 0 && totalExpenses === 0) {
     return null;
   }
@@ -36,11 +41,11 @@ export default function TotalBudgetCard() {
         <Stack direction="vertical" gap="2" className="mt-4">
             <div className="d-flex justify-content-between">
                 <span>Total Income:</span>
-                <span>{currencyFormatter.format(totalIncome)}</span>
+                <span style={{color: "green"}}>{currencyFormatter.format(totalIncome)}</span>
             </div>
             <div className="d-flex justify-content-between">
                 <span>Total Expenses:</span>
-                <span>{currencyFormatter.format(totalExpenses)}</span>
+                <span style={{color: "red"}}>{currencyFormatter.format(totalExpenses)}</span>
             </div>
         </Stack>
       </Card.Body>
