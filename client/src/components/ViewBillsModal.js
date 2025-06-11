@@ -16,6 +16,7 @@ export default function ViewBillsModal({ show, handleClose, onEditExpenseClick }
         <Stack direction="vertical" gap="3">
           {billExpenses.map(expense => (
             <Stack direction="horizontal" gap="2" key={expense.id}>
+              {/* MODIFIED: The budget name/uncategorized text is removed */}
               <div className="me-auto fs-4">{expense.description}</div>
               <div className="fs-5">{currencyFormatter.format(expense.amount)}</div>
               <Button onClick={() => onEditExpenseClick(expense.id)} size="sm" variant="outline-primary">
