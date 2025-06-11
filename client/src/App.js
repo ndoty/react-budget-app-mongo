@@ -15,7 +15,7 @@ import EditIncomeModal from "./components/EditIncomeModal";
 import BudgetCard from "./components/BudgetCard";
 import UncategorizedBudgetCard from "./components/UncategorizedBudgetCard";
 import TotalBudgetCard from "./components/TotalBudgetCard";
-// MODIFIED: BillsCard is no longer needed here as it will not be rendered.
+// BillsCard is no longer imported or rendered directly here.
 
 // Contexts & Hooks
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
@@ -164,7 +164,7 @@ function BudgetAppContent() {
           <h1 className="me-auto">Budgets</h1>
           <Button variant="primary" onClick={() => setShowAddBudgetModal(true)}>Add Budget</Button>
           <Button variant="success" onClick={() => setShowAddIncomeModal(true)}>Add Income</Button>
-          <Button variant="outline-primary" onClick={() => openAddExpenseModal()}>Add Expense</Button>
+          <Button variant="outline-primary" onClick={openAddExpenseModal}>Add Expense</Button>
         </Stack>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
           <TotalBudgetCard 
@@ -185,7 +185,7 @@ function BudgetAppContent() {
               />
             );
           })}
-          {/* BillsCard has been removed from here */}
+          {/* BillsCard is no longer rendered here */}
           <UncategorizedBudgetCard onAddExpenseClick={() => openAddExpenseModal()} onViewExpensesClick={() => setViewExpensesModalBudgetId(UNCATEGORIZED_BUDGET_ID)} />
         </div>
       </Container>
