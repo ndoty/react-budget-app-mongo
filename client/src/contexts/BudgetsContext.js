@@ -41,13 +41,72 @@ export const BudgetsProvider = ({ children }) => {
     }
   }, [isAuthenticated, authLoading, setBudgets, setExpenses, setIncome]);
 
+  // WebSocket connection logic
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      return;
+    }
+
+    // Use environment variable for WebSocket URL, with a fallback
+    const WS_URL = process.env.REACT_APP_WS_URL || "wss://budget-api.technickservices.com/ws";
+    const ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+      console.log("CLIENT WebSocket: Connected to server.");
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        console.log("CLIENT WebSocket: Update received -> ", message.type);
+
+        const refetchData = async (key, setter) => {
+          const data = await fetchDataFromAPI(key, token);
+          if (data) setter(data);
+        };
+
+        switch (message.type) {
+          case 'BUDGET_DATA_UPDATED':
+            refetchData('budgets', setBudgets);
+            break;
+          case 'EXPENSE_DATA_UPDATED':
+            refetchData('expenses', setExpenses);
+            break;
+          case 'INCOME_DATA_UPDATED':
+            refetchData('income', setIncome);
+            break;
+          default:
+            console.log("Unknown update type:", message.type);
+            break;
+        }
+      } catch (error) {
+        console.error("Failed to parse WebSocket message:", error);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log("CLIENT WebSocket: Disconnected from server.");
+    };
+
+    ws.onerror = (error) => {
+      console.error("CLIENT WebSocket: Error:", error);
+    };
+
+    // Cleanup on component unmount or user logout
+    return () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+  }, [isAuthenticated, token, setBudgets, setExpenses, setIncome]);
+
+
   function getBudgetExpenses(budgetId) {
     return Array.isArray(expenses)
       ? expenses.filter((expense) => expense.budgetId === budgetId)
       : [];
   }
   
-  // This function filters expenses based on the isBill flag
   function getBillExpenses() {
     return Array.isArray(expenses)
       ? expenses.filter((expense) => expense.isBill)
@@ -69,19 +128,14 @@ export const BudgetsProvider = ({ children }) => {
   async function addExpense({ description, amount, budgetId, isBill }) {
     if (!isAuthenticated || !token) return;
     const newExpense = { id: uuidV4(), description, amount, budgetId, isBill };
-    const savedExpense = await postSingleItemToAPI("expenses", newExpense, token);
-    if (savedExpense) {
-      setExpenses((prev) => [...(Array.isArray(prev) ? prev : []), savedExpense]);
-    }
+    await postSingleItemToAPI("expenses", newExpense, token);
+    // No need to set state here; WebSocket will trigger a refetch for all clients
   }
   
   async function addIncome({ description, amount }) {
     if (!isAuthenticated || !token) return;
     const newIncome = { id: uuidV4(), description, amount };
-    const savedIncome = await postSingleItemToAPI("income", newIncome, token);
-    if(savedIncome) {
-        setIncome(prev => [...(Array.isArray(prev) ? prev : []), savedIncome]);
-    }
+    await postSingleItemToAPI("income", newIncome, token);
   }
 
   async function addBudget({ name, max }) {
@@ -91,60 +145,37 @@ export const BudgetsProvider = ({ children }) => {
       return;
     }
     const newBudget = { id: uuidV4(), name, max };
-    const savedBudget = await postSingleItemToAPI("budgets", newBudget, token);
-    if (savedBudget) {
-      setBudgets((prev) => [...(Array.isArray(prev) ? prev : []), savedBudget]);
-    }
+    await postSingleItemToAPI("budgets", newBudget, token);
   }
 
   async function deleteBudget({ id }) {
     if (!isAuthenticated || !token) return;
-    const result = await deleteItemFromAPI("budgets", id, token);
-    if (result) {
-      setBudgets((prev) => (Array.isArray(prev) ? prev.filter((b) => b.id !== id) : []));
-      const updatedExpenses = await fetchDataFromAPI("expenses", token);
-      if (updatedExpenses) setExpenses(updatedExpenses);
-    }
+    await deleteItemFromAPI("budgets", id, token);
   }
     
   async function deleteIncome({ id }) {
     if (!isAuthenticated || !token) return;
-    const result = await deleteItemFromAPI("income", id, token);
-    if (result) {
-        setIncome(prev => Array.isArray(prev) ? prev.filter(i => i.id !== id) : []);
-    }
+    await deleteItemFromAPI("income", id, token);
   }
 
   async function deleteExpense({ id }) {
     if (!isAuthenticated || !token) return;
-    const result = await deleteItemFromAPI("expenses", id, token);
-    if (result) {
-      setExpenses((prev) => (Array.isArray(prev) ? prev.filter((exp) => exp.id !== id) : []));
-    }
+    await deleteItemFromAPI("expenses", id, token);
   }
   
   async function updateBudget({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    const updatedBudget = await updateItemInAPI("budgets", id, updates, token);
-    if (updatedBudget) {
-      setBudgets(prevBudgets => prevBudgets.map(b => b.id === id ? updatedBudget : b));
-    }
+    await updateItemInAPI("budgets", id, updates, token);
   }
   
   async function updateExpense({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    const updatedExpense = await updateItemInAPI("expenses", id, updates, token);
-    if (updatedExpense) {
-      setExpenses(prevExpenses => prevExpenses.map(e => e.id === id ? updatedExpense : e));
-    }
+    await updateItemInAPI("expenses", id, updates, token);
   }
   
   async function updateIncome({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    const updatedIncome = await updateItemInAPI("income", id, updates, token);
-    if (updatedIncome) {
-        setIncome(prevIncome => prevIncome.map(i => i.id === id ? updatedIncome : i));
-    }
+    await updateItemInAPI("income", id, updates, token);
   }
 
   if (authLoading) {
@@ -158,7 +189,7 @@ export const BudgetsProvider = ({ children }) => {
         expenses,
         income,
         getBudgetExpenses,
-        getBillExpenses, // Ensure this is included in the value
+        getBillExpenses,
         getIncomeItem,
         getBudget,
         getExpense,
