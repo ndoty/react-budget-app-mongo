@@ -66,8 +66,9 @@ const authRoutes = require('./routes/auth');
 const authMiddleware = require('./middleware/authMiddleware');
 const Budget = require("./models/Budget");
 const Expense = require("./models/Expense");
-const MonthlyCap = require('./models/MonthlyCap');
 const Income = require('./models/Income');
+// MODIFIED: Removed MonthlyCap model import
+// const MonthlyCap = require('./models/MonthlyCap');
 
 app.use('/api/auth', authRoutes);
 app.get('/server-status', (req, res) => res.status(200).send('Backend server (budget-api) is alive.'));
@@ -103,7 +104,7 @@ app.delete("/api/budgets/:id", authMiddleware, async (req, res) => {
     broadcastDataUpdate('BUDGET_DATA_UPDATED');
     broadcastDataUpdate('EXPENSE_DATA_UPDATED');
     res.status(200).json({ msg: "Budget deleted" });
-  } catch (error) { console.error("DELETE /api/budgets/:id Error:", error); res.status(500).json({ msg: "Server Error" }); } // MODIFIED: Added closing })
+  } catch (error) { console.error("DELETE /api/budgets/:id Error:", error); res.status(500).json({ msg: "Server Error" }); }
 });
 
 // Expenses Routes
@@ -177,20 +178,10 @@ app.put("/api/income/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// Monthly Cap Routes
-app.get("/api/monthlyCap", authMiddleware, async (req, res) => {
-  try {
-    const cap = await MonthlyCap.findOne({ userId: req.userId });
-    res.status(200).json(cap ? [cap] : []);
-  } catch (error) { console.error("GET /api/monthlyCap Error:", error); res.status(500).json({ msg: "Server Error" }); }
-});
-app.post("/api/monthlyCap", authMiddleware, async (req, res) => {
-  try {
-    const updatedCap = await MonthlyCap.findOneAndUpdate({ userId: req.userId }, { cap: req.body.cap }, { new: true, upsert: true });
-    broadcastDataUpdate('MONTHLY_CAP_UPDATED');
-    res.status(200).json([updatedCap]);
-  } catch (error) { console.error("POST /api/monthlyCap Error:", error); res.status(500).json({ msg: "Server Error" }); }
-});
+// MODIFIED: Removed Monthly Cap routes
+// app.get("/api/monthlyCap", ...);
+// app.post("/api/monthlyCap", ...);
+
 
 server.listen(PORT, () => {
   console.log(`SERVER LOG: Backend with WebSocket support is running on port ${PORT}`);
