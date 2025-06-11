@@ -22,10 +22,17 @@ const expenseSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  isBill: { // Ensure this field is present
+  isBill: { 
     type: Boolean,
     required: true,
     default: false,
+  },
+  // MODIFIED: Reverted dueDate type back to Number
+  dueDate: {
+    type: Number,
+    min: 1,
+    max: 31,
+    required: false,
   },
 });
 
