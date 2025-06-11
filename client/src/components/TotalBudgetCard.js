@@ -1,18 +1,49 @@
-import { useBudgets } from "../contexts/BudgetsContext"
-import BudgetCard from "./BudgetCard"
+import { Card, Stack } from "react-bootstrap";
+import { currencyFormatter } from "../utils";
+import { useBudgets } from "../contexts/BudgetsContext";
 
 export default function TotalBudgetCard() {
-  const { expenses, monthlyCap } = useBudgets()
-  const amount = expenses.reduce((total, expense) => total + expense.amount, 0)
+  const { expenses, income } = useBudgets();
+  const totalExpenses = expenses.reduce((total, expense) => total + expense.amount, 0);
+  const totalIncome = income.reduce((total, item) => total + item.amount, 0);
 
-  // MODIFIED: 'max' is now determined ONLY by the monthlyCap.
-  // If no valid monthly cap is set, max will be null.
-  const max = monthlyCap.length > 0 && monthlyCap[0].cap > 0 ? monthlyCap[0].cap : null
+  const balance = totalIncome - totalExpenses;
 
-  // Don't show the card at all if there's no spending.
-  if (amount === 0) return null
+  // Determine card style based on the balance
+  const cardStyle = {};
+  if (balance < 0) {
+    cardStyle.backgroundColor = 'rgba(255, 0, 0, 0.1)'; // Light red for negative balance
+    cardStyle.borderColor = 'rgba(255, 0, 0, 0.2)';
+  } else {
+    cardStyle.backgroundColor = 'rgba(0, 255, 0, 0.1)'; // Light green for positive balance
+    cardStyle.borderColor = 'rgba(0, 255, 0, 0.2)';
+  }
 
-  // The underlying BudgetCard component will automatically hide the progress bar
-  // and "Remaining" text when the 'max' prop is null.
-  return <BudgetCard amount={amount} name="Total" gray max={max} hideButtons />
+  // Do not render the card if there is no activity at all
+  if (totalIncome === 0 && totalExpenses === 0) {
+    return null;
+  }
+
+  return (
+    <Card style={cardStyle}>
+      <Card.Body>
+        <Card.Title className="d-flex justify-content-between align-items-baseline fw-normal mb-3">
+          <div className="me-2">Overall Balance</div>
+          <div className="d-flex align-items-baseline" style={{ color: balance < 0 ? 'red' : 'green' }}>
+            {currencyFormatter.format(balance)}
+          </div>
+        </Card.Title>
+        <Stack direction="vertical" gap="2" className="mt-4">
+            <div className="d-flex justify-content-between">
+                <span>Total Income:</span>
+                <span>{currencyFormatter.format(totalIncome)}</span>
+            </div>
+            <div className="d-flex justify-content-between">
+                <span>Total Expenses:</span>
+                <span>{currencyFormatter.format(totalExpenses)}</span>
+            </div>
+        </Stack>
+      </Card.Body>
+    </Card>
+  );
 }
