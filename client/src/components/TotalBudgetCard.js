@@ -1,36 +1,34 @@
 import { Button, Card, Stack } from "react-bootstrap";
 import { currencyFormatter } from "../utils";
-import { useBudgets } from "../contexts/BudgetsContext";
+import { useBudgets, UNCATEGORIZED_BUDGET_ID } from "../contexts/BudgetsContext";
 
 export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick }) {
-  const { expenses, income, budgets, getBillExpenses } = useBudgets();
+  const { expenses, income, budgets, getBudgetExpenses, getBillExpenses } = useBudgets();
 
-  // --- Calculations ---
   const allExpenses = expenses || [];
   const allBudgets = budgets || [];
+  
+  // --- Balance Calculation ---
   const totalIncome = (income || []).reduce((total, item) => total + item.amount, 0);
-
-  // Calculate the total obligation from your defined budgets
+  
   const totalBudgetObligation = allBudgets.reduce((total, budget) => {
     const expensesForBudget = allExpenses.filter(e => e.budgetId === budget.id);
     const amountSpent = expensesForBudget.reduce((t, e) => t + e.amount, 0);
-    // Use the amount spent if over budget, otherwise use the max planned amount
     const obligation = amountSpent > budget.max ? amountSpent : budget.max;
     return total + obligation;
   }, 0);
 
-  // Calculate spending that is not part of any user-created budget (i.e., Bills and Uncategorized)
   const budgetIds = allBudgets.map(b => b.id);
   const nonBudgetedExpenses = allExpenses.filter(e => !budgetIds.includes(e.budgetId));
   const totalNonBudgetedSpending = nonBudgetedExpenses.reduce((total, e) => total + e.amount, 0);
 
-  // The new balance calculation based on your rules
   const balance = totalIncome - totalBudgetObligation - totalNonBudgetedSpending;
 
-  // --- Display values (for the breakdown) ---
-  const totalExpensesDisplay = allExpenses.reduce((total, expense) => total + expense.amount, 0);
+  // --- Display Values (for the breakdown) ---
   const totalBillsDisplay = (getBillExpenses() || []).reduce((total, expense) => total + expense.amount, 0);
   const totalBudgetMaxDisplay = allBudgets.reduce((total, budget) => total + budget.max, 0);
+  // MODIFIED: Calculate only uncategorized spending for display
+  const totalUncategorizedDisplay = getBudgetExpenses(UNCATEGORIZED_BUDGET_ID).reduce((total, expense) => total + expense.amount, 0);
 
 
   // --- Card Styling ---
@@ -44,7 +42,7 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
   }
 
   // --- Render Logic ---
-  if (totalIncome === 0 && totalExpensesDisplay === 0 && allBudgets.length === 0) {
+  if (totalIncome === 0 && totalNonBudgetedSpending === 0 && allBudgets.length === 0) {
     return null;
   }
 
@@ -75,10 +73,11 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
                   - {currencyFormatter.format(totalBillsDisplay)}
                 </span>
             </div>
+            {/* MODIFIED: This now shows only Uncategorized spending */}
             <div className="d-flex justify-content-between">
-                <span>Total Spent:</span>
+                <span>Total Uncategorized:</span>
                 <span className="text-danger">
-                  - {currencyFormatter.format(totalExpensesDisplay)}
+                  - {currencyFormatter.format(totalUncategorizedDisplay)}
                 </span>
             </div>
         </Stack>
