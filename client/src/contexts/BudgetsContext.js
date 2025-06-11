@@ -1,3 +1,4 @@
+// client/src/contexts/BudgetsContext.js
 import React, { createContext, useContext, useEffect } from "react";
 import { Container } from "react-bootstrap";
 import { v4 as uuidV4 } from "uuid";
@@ -5,7 +6,7 @@ import { v4 as uuidV4 } from "uuid";
 import useMongo, {
   postSingleItemToAPI,
   deleteItemFromAPI,
-  postMonthlyCapToAPI,
+  updateItemInAPI,
   fetchDataFromAPI,
 } from "../hooks/useMongo";
 
@@ -14,7 +15,7 @@ import { useAuth } from "./AuthContext";
 const BudgetsContext = createContext(undefined);
 
 export const UNCATEGORIZED_BUDGET_ID = "Uncategorized";
-export const BILLS_BUDGET_ID = "Bills"; // MODIFIED: Add a constant for our new Bills category
+export const BILLS_BUDGET_ID = "Bills";
 
 export function useBudgets() {
   const context = useContext(BudgetsContext);
@@ -29,41 +30,54 @@ export const BudgetsProvider = ({ children }) => {
 
   const [budgets, setBudgets] = useMongo("budgets", []);
   const [expenses, setExpenses] = useMongo("expenses", []);
+  const [income, setIncome] = useMongo("income", []);
 
   useEffect(() => {
-    // This effect to clear data on logout remains unchanged
     if (!authLoading && !isAuthenticated) {
       setBudgets([]);
       setExpenses([]);
+      setIncome([]);
     }
-  }, [isAuthenticated, authLoading, setBudgets, setExpenses]);
+  }, [isAuthenticated, authLoading, setBudgets, setExpenses, setIncome]);
 
   function getBudgetExpenses(budgetId) {
     return Array.isArray(expenses)
       ? expenses.filter((expense) => expense.budgetId === budgetId)
       : [];
   }
+    
+  function getIncomeItem(incomeId) {
+    return Array.isArray(income) ? income.find((i) => i.id === incomeId) : undefined;
+  }
+    
+  function getBudget(budgetId) {
+      return Array.isArray(budgets) ? budgets.find((b) => b.id === budgetId) : undefined;
+  }
 
-  // MODIFIED: 'isBill' parameter is removed
+  function getExpense(expenseId) {
+    return Array.isArray(expenses) ? expenses.find(e => e.id === expenseId) : undefined;
+  }
+
   async function addExpense({ description, amount, budgetId }) {
-    if (!isAuthenticated || !token) {
-      console.error("User not authenticated/no token for addExpense");
-      return;
-    }
+    if (!isAuthenticated || !token) return;
     const newExpense = { id: uuidV4(), description, amount, budgetId };
     const savedExpense = await postSingleItemToAPI("expenses", newExpense, token);
     if (savedExpense) {
       setExpenses((prev) => [...(Array.isArray(prev) ? prev : []), savedExpense]);
-    } else {
-      console.error("Failed to save expense");
+    }
+  }
+  
+  async function addIncome({ description, amount }) {
+    if (!isAuthenticated || !token) return;
+    const newIncome = { id: uuidV4(), description, amount };
+    const savedIncome = await postSingleItemToAPI("income", newIncome, token);
+    if(savedIncome) {
+        setIncome(prev => [...(Array.isArray(prev) ? prev : []), savedIncome]);
     }
   }
 
   async function addBudget({ name, max }) {
-    if (!isAuthenticated || !token) {
-      console.error("User not authenticated/no token for addBudget");
-      return;
-    }
+    if (!isAuthenticated || !token) return;
     if (Array.isArray(budgets) && budgets.find((b) => b.name === name)) {
       alert("Budget with this name already exists.");
       return;
@@ -72,45 +86,58 @@ export const BudgetsProvider = ({ children }) => {
     const savedBudget = await postSingleItemToAPI("budgets", newBudget, token);
     if (savedBudget) {
       setBudgets((prev) => [...(Array.isArray(prev) ? prev : []), savedBudget]);
-    } else {
-      console.error("Failed to save budget");
     }
   }
 
-  async function deleteBudgetClient({ id }) {
-    if (!isAuthenticated || !token) {
-      console.error("User not authenticated/no token for deleteBudget");
-      return;
-    }
+  async function deleteBudget({ id }) {
+    if (!isAuthenticated || !token) return;
     const result = await deleteItemFromAPI("budgets", id, token);
     if (result) {
-      setBudgets((prev) =>
-        Array.isArray(prev) ? prev.filter((b) => b.id !== id) : []
-      );
-      // Also refetch expenses in case some were under the deleted budget
+      setBudgets((prev) => (Array.isArray(prev) ? prev.filter((b) => b.id !== id) : []));
       const updatedExpenses = await fetchDataFromAPI("expenses", token);
       if (updatedExpenses) setExpenses(updatedExpenses);
-    } else {
-      console.error("Failed to delete budget");
+    }
+  }
+    
+  async function deleteIncome({ id }) {
+    if (!isAuthenticated || !token) return;
+    const result = await deleteItemFromAPI("income", id, token);
+    if (result) {
+        setIncome(prev => Array.isArray(prev) ? prev.filter(i => i.id !== id) : []);
     }
   }
 
-  async function deleteExpenseClient({ id }) {
-    if (!isAuthenticated || !token) {
-      console.error("User not authenticated/no token for deleteExpense");
-      return;
-    }
+  async function deleteExpense({ id }) {
+    if (!isAuthenticated || !token) return;
     const result = await deleteItemFromAPI("expenses", id, token);
     if (result) {
-      setExpenses((prev) =>
-        Array.isArray(prev) ? prev.filter((exp) => exp.id !== id) : []
-      );
-    } else {
-      console.error("Failed to delete expense");
+      setExpenses((prev) => (Array.isArray(prev) ? prev.filter((exp) => exp.id !== id) : []));
     }
   }
   
-  // No other functions need changing
+  async function updateBudget({ id, ...updates }) {
+    if (!isAuthenticated || !token) return;
+    const updatedBudget = await updateItemInAPI("budgets", id, updates, token);
+    if (updatedBudget) {
+      setBudgets(prevBudgets => prevBudgets.map(b => b.id === id ? updatedBudget : b));
+    }
+  }
+  
+  async function updateExpense({ id, ...updates }) {
+    if (!isAuthenticated || !token) return;
+    const updatedExpense = await updateItemInAPI("expenses", id, updates, token);
+    if (updatedExpense) {
+      setExpenses(prevExpenses => prevExpenses.map(e => e.id === id ? updatedExpense : e));
+    }
+  }
+  
+  async function updateIncome({ id, ...updates }) {
+    if (!isAuthenticated || !token) return;
+    const updatedIncome = await updateItemInAPI("income", id, updates, token);
+    if (updatedIncome) {
+        setIncome(prevIncome => prevIncome.map(i => i.id === id ? updatedIncome : i));
+    }
+  }
 
   if (authLoading) {
     return <Container className="my-4" style={{ textAlign: 'center' }}><p>Loading User Data (waiting for auth)...</p></Container>;
@@ -121,12 +148,22 @@ export const BudgetsProvider = ({ children }) => {
       value={{
         budgets,
         expenses,
+        income,
         getBudgetExpenses,
+        getIncomeItem,
+        getBudget,
+        getExpense,
         addExpense,
+        addIncome,
         addBudget,
-        deleteBudget: deleteBudgetClient,
-        deleteExpense: deleteExpenseClient,
-        BILLS_BUDGET_ID, // MODIFIED: Expose the new constant
+        deleteBudget,
+        deleteIncome,
+        deleteExpense,
+        updateBudget,
+        updateExpense,
+        updateIncome,
+        BILLS_BUDGET_ID,
+        UNCATEGORIZED_BUDGET_ID,
       }}
     >
       {children}
