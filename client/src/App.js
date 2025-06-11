@@ -15,7 +15,6 @@ import EditIncomeModal from "./components/EditIncomeModal";
 import BudgetCard from "./components/BudgetCard";
 import UncategorizedBudgetCard from "./components/UncategorizedBudgetCard";
 import TotalBudgetCard from "./components/TotalBudgetCard";
-// BillsCard is no longer imported or rendered directly here.
 
 // Contexts & Hooks
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
@@ -149,7 +148,8 @@ function BudgetAppContent() {
     <>
       <Navbar bg="light" expand="lg" className="mb-4">
         <Container>
-          <Navbar.Brand as={Link} to="/">Budget App</Navbar.Brand>
+          {/* MODIFIED: Renamed the application */}
+          <Navbar.Brand as={Link} to="/">TechNick Services Budget App</Navbar.Brand>
           {currentUser && <Navbar.Text className="ms-2">Signed in as: <strong>{currentUser.username}</strong></Navbar.Text>}
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav" className="justify-content-end">
@@ -161,10 +161,11 @@ function BudgetAppContent() {
       </Navbar>
       <Container className="my-4">
         <Stack direction="horizontal" gap="2" className="mb-4">
-          <h1 className="me-auto">Budgets</h1>
+          {/* MODIFIED: Removed the "Budgets" h1 title */}
+          <h1 className="me-auto" style={{visibility: 'hidden'}}>Budgets</h1>
           <Button variant="primary" onClick={() => setShowAddBudgetModal(true)}>Add Budget</Button>
           <Button variant="success" onClick={() => setShowAddIncomeModal(true)}>Add Income</Button>
-          <Button variant="outline-primary" onClick={openAddExpenseModal}>Add Expense</Button>
+          <Button variant="outline-primary" onClick={() => openAddExpenseModal()}>Add Expense</Button>
         </Stack>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
           <TotalBudgetCard 
@@ -185,7 +186,6 @@ function BudgetAppContent() {
               />
             );
           })}
-          {/* BillsCard is no longer rendered here */}
           <UncategorizedBudgetCard onAddExpenseClick={() => openAddExpenseModal()} onViewExpensesClick={() => setViewExpensesModalBudgetId(UNCATEGORIZED_BUDGET_ID)} />
         </div>
       </Container>
