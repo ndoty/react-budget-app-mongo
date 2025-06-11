@@ -41,50 +41,78 @@ export const BudgetsProvider = ({ children }) => {
     }
   }, [isAuthenticated, authLoading, setBudgets, setExpenses, setIncome]);
 
-  // WebSocket connection logic remains the same to update OTHER clients
+  // MODIFIED: Added robust WebSocket connection logic with reconnection
   useEffect(() => {
     if (!isAuthenticated || !token) {
       return;
     }
 
-    const WS_URL = process.env.REACT_APP_WS_URL || "wss://budget-api.technickservices.com/ws";
-    const ws = new WebSocket(WS_URL);
+    let ws;
+    let reconnectTimeout;
 
-    ws.onopen = () => console.log("CLIENT WebSocket: Connected to server.");
-    ws.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        console.log("CLIENT WebSocket: Update received -> ", message.type);
+    function connect() {
+      const WS_URL = process.env.REACT_APP_WS_URL || "wss://budget-api.technickservices.com/ws";
+      ws = new WebSocket(WS_URL);
 
-        const refetchData = async (key, setter) => {
-          const data = await fetchDataFromAPI(key, token);
-          if (data) setter(data);
-        };
+      ws.onopen = () => {
+        console.log("CLIENT WebSocket: Connected to server.");
+        clearTimeout(reconnectTimeout);
+      };
 
-        switch (message.type) {
-          case 'BUDGET_DATA_UPDATED':
-            refetchData('budgets', setBudgets);
-            break;
-          case 'EXPENSE_DATA_UPDATED':
-            refetchData('expenses', setExpenses);
-            break;
-          case 'INCOME_DATA_UPDATED':
-            refetchData('income', setIncome);
-            break;
-          default:
-            break;
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          console.log("CLIENT WebSocket: Update received -> ", message.type);
+
+          const refetchData = async (key, setter) => {
+            const data = await fetchDataFromAPI(key, token);
+            if (data) setter(data);
+          };
+
+          switch (message.type) {
+            case 'BUDGET_DATA_UPDATED':
+              refetchData('budgets', setBudgets);
+              break;
+            case 'EXPENSE_DATA_UPDATED':
+              refetchData('expenses', setExpenses);
+              break;
+            case 'INCOME_DATA_UPDATED':
+              refetchData('income', setIncome);
+              break;
+            default:
+              break;
+          }
+        } catch (error) {
+          console.error("Failed to parse WebSocket message:", error);
         }
-      } catch (error) {
-        console.error("Failed to parse WebSocket message:", error);
+      };
+
+      ws.onclose = () => {
+        console.log("CLIENT WebSocket: Disconnected. Attempting to reconnect in 3 seconds.");
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = setTimeout(() => {
+            connect();
+        }, 3000);
+      };
+
+      ws.onerror = (error) => {
+        console.error("CLIENT WebSocket: Error:", error);
+        ws.close(); // This triggers the onclose handler for reconnection
+      };
+    }
+
+    connect(); // Initial connection
+
+    // Cleanup on component unmount or logout
+    return () => {
+      clearTimeout(reconnectTimeout);
+      if (ws) {
+        ws.onclose = null; // Prevent reconnection logic from firing on manual close
+        ws.close();
       }
     };
-    ws.onclose = () => console.log("CLIENT WebSocket: Disconnected from server.");
-    ws.onerror = (error) => console.error("CLIENT WebSocket: Error:", error);
-
-    return () => {
-      if (ws.readyState === WebSocket.OPEN) ws.close();
-    };
   }, [isAuthenticated, token, setBudgets, setExpenses, setIncome]);
+
 
   function getBudgetExpenses(budgetId) {
     return Array.isArray(expenses)
@@ -109,8 +137,6 @@ export const BudgetsProvider = ({ children }) => {
   function getExpense(expenseId) {
     return Array.isArray(expenses) ? expenses.find(e => e.id === expenseId) : undefined;
   }
-
-  // --- MODIFIED: Data functions now update local state for instant feedback ---
 
   async function addExpense({ description, amount, budgetId, isBill, dueDate }) {
     if (!isAuthenticated || !token) return;
@@ -147,7 +173,6 @@ export const BudgetsProvider = ({ children }) => {
     if (!isAuthenticated || !token) return;
     const result = await deleteItemFromAPI("budgets", id, token);
     if (result) {
-      // Must refetch expenses in case any were assigned to the deleted budget
       const updatedExpenses = await fetchDataFromAPI("expenses", token);
       if (updatedExpenses) setExpenses(updatedExpenses);
       setBudgets(prev => prev.filter(b => b.id !== id));
