@@ -6,12 +6,32 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
   const { expenses, income, budgets, getBillExpenses } = useBudgets();
 
   // --- Calculations ---
+  const allExpenses = expenses || [];
+  const allBudgets = budgets || [];
   const totalIncome = (income || []).reduce((total, item) => total + item.amount, 0);
-  const totalExpenses = (expenses || []).reduce((total, expense) => total + expense.amount, 0);
-  const totalBills = (getBillExpenses() || []).reduce((total, expense) => total + expense.amount, 0);
-  const totalBudgetMax = (budgets || []).reduce((total, budget) => total + budget.max, 0);
-  
-  const balance = totalIncome - totalExpenses;
+
+  // Calculate the total obligation from your defined budgets
+  const totalBudgetObligation = allBudgets.reduce((total, budget) => {
+    const expensesForBudget = allExpenses.filter(e => e.budgetId === budget.id);
+    const amountSpent = expensesForBudget.reduce((t, e) => t + e.amount, 0);
+    // Use the amount spent if over budget, otherwise use the max planned amount
+    const obligation = amountSpent > budget.max ? amountSpent : budget.max;
+    return total + obligation;
+  }, 0);
+
+  // Calculate spending that is not part of any user-created budget (i.e., Bills and Uncategorized)
+  const budgetIds = allBudgets.map(b => b.id);
+  const nonBudgetedExpenses = allExpenses.filter(e => !budgetIds.includes(e.budgetId));
+  const totalNonBudgetedSpending = nonBudgetedExpenses.reduce((total, e) => total + e.amount, 0);
+
+  // The new balance calculation based on your rules
+  const balance = totalIncome - totalBudgetObligation - totalNonBudgetedSpending;
+
+  // --- Display values (for the breakdown) ---
+  const totalExpensesDisplay = allExpenses.reduce((total, expense) => total + expense.amount, 0);
+  const totalBillsDisplay = (getBillExpenses() || []).reduce((total, expense) => total + expense.amount, 0);
+  const totalBudgetMaxDisplay = allBudgets.reduce((total, budget) => total + budget.max, 0);
+
 
   // --- Card Styling ---
   const cardStyle = {};
@@ -24,7 +44,7 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
   }
 
   // --- Render Logic ---
-  if (totalIncome === 0 && totalExpenses === 0 && (budgets || []).length === 0) {
+  if (totalIncome === 0 && totalExpensesDisplay === 0 && allBudgets.length === 0) {
     return null;
   }
 
@@ -43,23 +63,22 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
                 <span>Total Income:</span>
                 <span className="text-success">+{currencyFormatter.format(totalIncome)}</span>
             </div>
-            {/* MODIFIED: "Total Budgeted" is now styled like other expenses */}
             <div className="d-flex justify-content-between">
                 <span>Total Budgeted:</span>
                 <span className="text-danger">
-                  - {currencyFormatter.format(totalBudgetMax)}
+                  - {currencyFormatter.format(totalBudgetMaxDisplay)}
                 </span>
             </div>
             <div className="d-flex justify-content-between">
                 <span>Total Bills:</span>
                 <span className="text-danger">
-                  - {currencyFormatter.format(totalBills)}
+                  - {currencyFormatter.format(totalBillsDisplay)}
                 </span>
             </div>
             <div className="d-flex justify-content-between">
                 <span>Total Spent:</span>
                 <span className="text-danger">
-                  - {currencyFormatter.format(totalExpenses)}
+                  - {currencyFormatter.format(totalExpensesDisplay)}
                 </span>
             </div>
         </Stack>
