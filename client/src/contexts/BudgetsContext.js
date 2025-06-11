@@ -41,7 +41,7 @@ export const BudgetsProvider = ({ children }) => {
     }
   }, [isAuthenticated, authLoading, setBudgets, setExpenses, setIncome]);
 
-  // WebSocket connection logic
+  // WebSocket connection logic remains the same to update OTHER clients
   useEffect(() => {
     if (!isAuthenticated || !token) {
       return;
@@ -50,10 +50,7 @@ export const BudgetsProvider = ({ children }) => {
     const WS_URL = process.env.REACT_APP_WS_URL || "wss://budget-api.technickservices.com/ws";
     const ws = new WebSocket(WS_URL);
 
-    ws.onopen = () => {
-      console.log("CLIENT WebSocket: Connected to server.");
-    };
-
+    ws.onopen = () => console.log("CLIENT WebSocket: Connected to server.");
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
@@ -75,26 +72,17 @@ export const BudgetsProvider = ({ children }) => {
             refetchData('income', setIncome);
             break;
           default:
-            console.log("Unknown update type:", message.type);
             break;
         }
       } catch (error) {
         console.error("Failed to parse WebSocket message:", error);
       }
     };
-
-    ws.onclose = () => {
-      console.log("CLIENT WebSocket: Disconnected from server.");
-    };
-
-    ws.onerror = (error) => {
-      console.error("CLIENT WebSocket: Error:", error);
-    };
+    ws.onclose = () => console.log("CLIENT WebSocket: Disconnected from server.");
+    ws.onerror = (error) => console.error("CLIENT WebSocket: Error:", error);
 
     return () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close();
-      }
+      if (ws.readyState === WebSocket.OPEN) ws.close();
     };
   }, [isAuthenticated, token, setBudgets, setExpenses, setIncome]);
 
@@ -122,20 +110,24 @@ export const BudgetsProvider = ({ children }) => {
     return Array.isArray(expenses) ? expenses.find(e => e.id === expenseId) : undefined;
   }
 
-  // --- MODIFIED DATA FUNCTIONS ---
-  // All functions now only make the API call. The local state update
-  // is handled by the WebSocket listener for all clients simultaneously.
+  // --- MODIFIED: Data functions now update local state for instant feedback ---
 
-  async function addExpense({ description, amount, budgetId, isBill }) {
+  async function addExpense({ description, amount, budgetId, isBill, dueDate }) {
     if (!isAuthenticated || !token) return;
-    const newExpense = { id: uuidV4(), description, amount, budgetId, isBill };
-    await postSingleItemToAPI("expenses", newExpense, token);
+    const newExpense = { id: uuidV4(), description, amount, budgetId, isBill, dueDate };
+    const savedExpense = await postSingleItemToAPI("expenses", newExpense, token);
+    if (savedExpense) {
+      setExpenses(prev => [...prev, savedExpense]);
+    }
   }
   
   async function addIncome({ description, amount }) {
     if (!isAuthenticated || !token) return;
     const newIncome = { id: uuidV4(), description, amount };
-    await postSingleItemToAPI("income", newIncome, token);
+    const savedIncome = await postSingleItemToAPI("income", newIncome, token);
+    if (savedIncome) {
+      setIncome(prev => [...prev, savedIncome]);
+    }
   }
 
   async function addBudget({ name, max }) {
@@ -145,37 +137,61 @@ export const BudgetsProvider = ({ children }) => {
       return;
     }
     const newBudget = { id: uuidV4(), name, max };
-    await postSingleItemToAPI("budgets", newBudget, token);
+    const savedBudget = await postSingleItemToAPI("budgets", newBudget, token);
+    if (savedBudget) {
+      setBudgets(prev => [...prev, savedBudget]);
+    }
   }
 
   async function deleteBudget({ id }) {
     if (!isAuthenticated || !token) return;
-    await deleteItemFromAPI("budgets", id, token);
+    const result = await deleteItemFromAPI("budgets", id, token);
+    if (result) {
+      // Must refetch expenses in case any were assigned to the deleted budget
+      const updatedExpenses = await fetchDataFromAPI("expenses", token);
+      if (updatedExpenses) setExpenses(updatedExpenses);
+      setBudgets(prev => prev.filter(b => b.id !== id));
+    }
   }
     
   async function deleteIncome({ id }) {
     if (!isAuthenticated || !token) return;
-    await deleteItemFromAPI("income", id, token);
+    const result = await deleteItemFromAPI("income", id, token);
+    if (result) {
+      setIncome(prev => prev.filter(i => i.id !== id));
+    }
   }
 
   async function deleteExpense({ id }) {
     if (!isAuthenticated || !token) return;
-    await deleteItemFromAPI("expenses", id, token);
+    const result = await deleteItemFromAPI("expenses", id, token);
+    if (result) {
+      setExpenses(prev => prev.filter(e => e.id !== id));
+    }
   }
   
   async function updateBudget({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    await updateItemInAPI("budgets", id, updates, token);
+    const updatedBudget = await updateItemInAPI("budgets", id, updates, token);
+    if (updatedBudget) {
+      setBudgets(prev => prev.map(b => b.id === id ? updatedBudget : b));
+    }
   }
   
   async function updateExpense({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    await updateItemInAPI("expenses", id, updates, token);
+    const updatedExpense = await updateItemInAPI("expenses", id, updates, token);
+    if (updatedExpense) {
+      setExpenses(prev => prev.map(e => e.id === id ? updatedExpense : e));
+    }
   }
   
   async function updateIncome({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    await updateItemInAPI("income", id, updates, token);
+    const updatedIncome = await updateItemInAPI("income", id, updates, token);
+    if (updatedIncome) {
+      setIncome(prev => prev.map(i => i.id === id ? updatedIncome : i));
+    }
   }
 
   if (authLoading) {
