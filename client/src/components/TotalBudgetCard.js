@@ -16,12 +16,24 @@ export default function TotalBudgetCard() {
     (total, budget) => total + budget.max, 0
   );
 
-  // 2. Determine the amount to subtract based on your logic
-  // Use the actual expenses or the total budgeted amount, whichever is higher.
+  // 2. Determine the amount to subtract based on your logic:
+  //    Use the actual expenses OR the total budgeted amount, whichever is HIGHER.
   const amountToSubtract = Math.max(totalExpenses, totalBudgetMax);
 
   // 3. Calculate the final balance
   const balance = totalIncome - amountToSubtract;
+
+  // --- DEBUGGING LOG ---
+  // This will show the exact numbers used in the calculation in your browser's F12 console.
+  console.log({
+    component: "TotalBudgetCard",
+    totalIncome,
+    totalExpenses,
+    totalBudgetMax,
+    amountToSubtract,
+    finalBalance: balance,
+  });
+  // --- END DEBUGGING LOG ---
 
   // Determine card style based on whether the final balance is positive or negative
   const cardStyle = {};
@@ -33,7 +45,7 @@ export default function TotalBudgetCard() {
     cardStyle.borderColor = 'rgba(0, 255, 0, 0.2)';
   }
 
-  // Do not render the card if there is no financial activity at all
+  // Do not render the card at all if there has been no financial activity
   if (totalIncome === 0 && totalExpenses === 0 && totalBudgetMax === 0) {
     return null;
   }
@@ -52,7 +64,6 @@ export default function TotalBudgetCard() {
                 <span>Total Income:</span>
                 <span style={{color: "green"}}>{currencyFormatter.format(totalIncome)}</span>
             </div>
-            {/* Display the value that is being subtracted (the higher of spent or budgeted) */}
             <div className="d-flex justify-content-between">
                 <span>Budgeted/Spent:</span>
                 <span style={{color: "red"}}>- {currencyFormatter.format(amountToSubtract)}</span>
