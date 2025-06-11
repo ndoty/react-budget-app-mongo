@@ -22,7 +22,6 @@ const expenseSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  // MODIFIED: Added isBill field to track bills
   isBill: {
     type: Boolean,
     default: false,
