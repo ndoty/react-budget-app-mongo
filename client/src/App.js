@@ -9,7 +9,7 @@ import AddBudgetModal from "./components/AddBudgetModal";
 import EditBudgetModal from "./components/EditBudgetModal";
 import AddExpenseModal from "./components/AddExpenseModal";
 import EditExpenseModal from "./components/EditExpenseModal";
-import MoveExpenseModal from "./components/MoveExpenseModal"; // MODIFIED: Import MoveExpenseModal
+import MoveExpenseModal from "./components/MoveExpenseModal";
 import ViewExpensesModal from "./components/ViewExpensesModal";
 import BudgetCard from "./components/BudgetCard";
 import UncategorizedBudgetCard from "./components/UncategorizedBudgetCard";
@@ -37,7 +37,6 @@ function BudgetAppContent() {
   const [showEditExpenseModal, setShowEditExpenseModal] = useState(false);
   const [editExpenseId, setEditExpenseId] = useState(null);
   
-  // MODIFIED: Add state for moving an expense
   const [showMoveExpenseModal, setShowMoveExpenseModal] = useState(false);
   const [moveExpenseId, setMoveExpenseId] = useState(null);
 
@@ -60,7 +59,6 @@ function BudgetAppContent() {
     setShowEditExpenseModal(true);
   }
 
-  // MODIFIED: Function to open the move expense modal
   function openMoveExpenseModal(expenseId) {
     setMoveExpenseId(expenseId);
     setShowMoveExpenseModal(true);
@@ -112,7 +110,8 @@ function BudgetAppContent() {
       <AddExpenseModal show={showAddExpenseModal} defaultBudgetId={addExpenseModalBudgetId} handleClose={() => setShowAddExpenseModal(false)} />
       <ViewExpensesModal
         budgetId={viewExpensesModalBudgetId}
-        handleClose={() => setViewExpensesModalBudgetId()}
+        // MODIFIED: Explicitly set the ID to null to ensure a clean state
+        handleClose={() => setViewExpensesModalBudgetId(null)}
         onEditExpenseClick={openEditExpenseModal}
         onMoveExpenseClick={openMoveExpenseModal}
       />
@@ -131,7 +130,6 @@ function BudgetAppContent() {
           expenseId={editExpenseId}
         />
       )}
-      {/* MODIFIED: Render the new MoveExpenseModal */}
       {moveExpenseId && (
         <MoveExpenseModal
           show={showMoveExpenseModal}
