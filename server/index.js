@@ -122,11 +122,10 @@ app.post("/api/expenses", authMiddleware, async (req, res) => {
 });
 app.put("/api/expenses/:id", authMiddleware, async (req, res) => {
   try {
-    // MODIFIED: Include isBill in the destructured properties from the request body
-    const { description, amount, budgetId } = req.body;
+    const { description, amount, budgetId, isBill } = req.body;
     const updatedExpense = await Expense.findOneAndUpdate(
       { id: req.params.id, userId: req.userId }, 
-      { description, amount, budgetId },
+      { description, amount, budgetId, isBill: !!isBill }, 
       { new: true }
     );
     if (!updatedExpense) return res.status(404).json({ msg: "Expense not found" });
@@ -143,6 +142,7 @@ app.delete("/api/expenses/:id", authMiddleware, async (req, res) => {
 });
 
 // Income Routes
+// ... (no changes to income routes)
 app.get("/api/income", authMiddleware, async (req, res) => {
   try {
     const income = await Income.find({ userId: req.userId }).sort({ date: -1 });
