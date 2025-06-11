@@ -21,7 +21,7 @@ import BillsCard from "./components/BillsCard";
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 
-// --- Authentication Pages (no changes) ---
+// --- Authentication Pages ---
 function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -129,7 +129,7 @@ function BudgetAppContent() {
   const [showViewBillsModal, setShowViewBillsModal] = useState(false);
   const [editIncomeModalId, setEditIncomeModalId] = useState();
   const [editExpenseId, setEditExpenseId] = useState();
-  const [editBudgetModalId, setEditBudgetModalId] = useState(); // State for Edit Budget Modal
+  const [editBudgetModalId, setEditBudgetModalId] = useState();
 
   const { budgets, getBudgetExpenses } = useBudgets();
   const { logout, currentUser } = useAuth();
@@ -167,7 +167,6 @@ function BudgetAppContent() {
           <Button variant="outline-primary" onClick={openAddExpenseModal}>Add Expense</Button>
         </Stack>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
-          {/* MODIFIED: Pass onViewBillsClick prop */}
           <TotalBudgetCard 
             onViewIncomeClick={() => setShowViewIncomeModal(true)} 
             onViewBillsClick={() => setShowViewBillsModal(true)}
@@ -182,7 +181,7 @@ function BudgetAppContent() {
                 max={budget.max}
                 onAddExpenseClick={() => openAddExpenseModal(budget.id)}
                 onViewExpensesClick={() => setViewExpensesModalBudgetId(budget.id)}
-                onEditBudgetClick={() => setEditBudgetModalId(budget.id)} // Pass the handler
+                onEditBudgetClick={() => setEditBudgetModalId(budget.id)}
               />
             );
           })}
@@ -217,7 +216,6 @@ function BudgetAppContent() {
           setEditExpenseId(id);
         }}
       />
-      {/* MODIFIED: Render the EditBudgetModal */}
       <EditBudgetModal
         show={editBudgetModalId != null}
         handleClose={() => setEditBudgetModalId(null)}
@@ -237,7 +235,6 @@ function BudgetAppContent() {
   );
 }
 
-// --- Protected Route and Main App (no changes) ---
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
   if (loading) {
