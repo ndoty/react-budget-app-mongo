@@ -1,3 +1,4 @@
+// client/src/components/TotalBudgetCard.js
 import { Button, Card, Stack } from "react-bootstrap";
 import { currencyFormatter } from "../utils";
 import { useBudgets } from "../contexts/BudgetsContext";
@@ -7,8 +8,8 @@ export default function TotalBudgetCard({ onViewIncomeClick }) {
   const { expenses, income, budgets, getBudgetExpenses, UNCATEGORIZED_BUDGET_ID } = useBudgets();
 
   // --- Calculations (no changes here) ---
-  const totalIncome = income.reduce((total, item) => total + item.amount, 0);
-  const totalObligationFromBudgets = budgets.reduce((total, budget) => {
+  const totalIncome = (income || []).reduce((total, item) => total + item.amount, 0);
+  const totalObligationFromBudgets = (budgets || []).reduce((total, budget) => {
     const spentInBudget = getBudgetExpenses(budget.id).reduce((sum, expense) => sum + expense.amount, 0);
     return total + Math.max(spentInBudget, budget.max);
   }, 0);
@@ -50,12 +51,12 @@ export default function TotalBudgetCard({ onViewIncomeClick }) {
             </div>
             <div className="d-flex justify-content-between">
                 <span>Total Budgeted:</span>
-                <span>{currencyFormatter.format(budgets.reduce((total, budget) => total + budget.max, 0))}</span>
+                <span>{currencyFormatter.format((budgets || []).reduce((total, budget) => total + budget.max, 0))}</span>
             </div>
             <div className="d-flex justify-content-between">
                 <span>Total Spent:</span>
                 <span className="text-danger">
-                  - {currencyFormatter.format(expenses.reduce((total, expense) => total + expense.amount, 0))}
+                  - {currencyFormatter.format((expenses || []).reduce((total, expense) => total + expense.amount, 0))}
                 </span>
             </div>
         </Stack>
