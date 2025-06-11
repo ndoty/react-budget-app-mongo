@@ -23,18 +23,6 @@ export default function TotalBudgetCard() {
   // 3. Calculate the final balance
   const balance = totalIncome - amountToSubtract;
 
-  // --- DEBUGGING LOG ---
-  // This will show the exact numbers used in the calculation in your browser's F12 console.
-  console.log({
-    component: "TotalBudgetCard",
-    totalIncome,
-    totalExpenses,
-    totalBudgetMax,
-    amountToSubtract,
-    finalBalance: balance,
-  });
-  // --- END DEBUGGING LOG ---
-
   // Determine card style based on whether the final balance is positive or negative
   const cardStyle = {};
   if (balance < 0) {
@@ -59,14 +47,26 @@ export default function TotalBudgetCard() {
             {currencyFormatter.format(balance)}
           </div>
         </Card.Title>
-        <Stack direction="vertical" gap="2" className="mt-4">
+        <div className="text-muted fs-6 mt-1" style={{ fontStyle: 'italic' }}>
+          (Income - greater of Spent or Budgeted)
+        </div>
+        <hr />
+        {/* MODIFIED: Updated the breakdown display */}
+        <Stack direction="vertical" gap="2" className="mt-2">
             <div className="d-flex justify-content-between">
                 <span>Total Income:</span>
-                <span style={{color: "green"}}>{currencyFormatter.format(totalIncome)}</span>
+                <span className="text-success">+{currencyFormatter.format(totalIncome)}</span>
             </div>
             <div className="d-flex justify-content-between">
-                <span>Budgeted/Spent:</span>
-                <span style={{color: "red"}}>- {currencyFormatter.format(amountToSubtract)}</span>
+                <span>Total Budgeted:</span>
+                <span>{currencyFormatter.format(totalBudgetMax)}</span>
+            </div>
+            <div className="d-flex justify-content-between">
+                <span>Total Spent:</span>
+                {/* Highlight in red if expenses have exceeded the budgeted amount */}
+                <span style={{ color: totalExpenses > totalBudgetMax ? 'red' : 'inherit' }}>
+                  {currencyFormatter.format(totalExpenses)}
+                </span>
             </div>
         </Stack>
       </Card.Body>
