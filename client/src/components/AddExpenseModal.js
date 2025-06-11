@@ -1,21 +1,23 @@
 import { Form, Modal, Button } from "react-bootstrap";
 import { useRef } from "react";
-import { useBudgets, UNCATEGORIZED_BUDGET_ID } from "../contexts/BudgetsContext";
+import { useBudgets, UNCATEGORIZED_BUDGET_ID, BILLS_BUDGET_ID } from "../contexts/BudgetsContext";
 
-export default function AddExpenseModal({ show, handleClose, defaultBudgetId }) {
+export default function AddExpenseModal({
+  show,
+  handleClose,
+  defaultBudgetId,
+}) {
   const descriptionRef = useRef();
   const amountRef = useRef();
   const budgetIdRef = useRef();
-  const isBillRef = useRef(); // MODIFIED: Add ref for the checkbox
   const { addExpense, budgets } = useBudgets();
 
-  async function handleSubmit(e) {
+  function handleSubmit(e) {
     e.preventDefault();
-    await addExpense({
+    addExpense({
       description: descriptionRef.current.value,
       amount: parseFloat(amountRef.current.value),
       budgetId: budgetIdRef.current.value,
-      isBill: isBillRef.current.checked, // MODIFIED: Pass the checkbox value
     });
     handleClose();
   }
@@ -43,7 +45,9 @@ export default function AddExpenseModal({ show, handleClose, defaultBudgetId }) 
           </Form.Group>
           <Form.Group className="mb-3" controlId="budgetId">
             <Form.Label>Budget</Form.Label>
+            {/* MODIFIED: Replaced checkbox with a dropdown option for "Bills" */}
             <Form.Select defaultValue={defaultBudgetId} ref={budgetIdRef}>
+              <option value={BILLS_BUDGET_ID}>Bills</option>
               <option value={UNCATEGORIZED_BUDGET_ID}>Uncategorized</option>
               {budgets.map(budget => (
                 <option key={budget.id} value={budget.id}>
@@ -51,14 +55,6 @@ export default function AddExpenseModal({ show, handleClose, defaultBudgetId }) 
                 </option>
               ))}
             </Form.Select>
-          </Form.Group>
-          {/* MODIFIED: Add checkbox for marking as a bill */}
-          <Form.Group className="mb-3" controlId="isBill">
-            <Form.Check
-              type="checkbox"
-              ref={isBillRef}
-              label="Is this a recurring bill?"
-            />
           </Form.Group>
           <div className="d-flex justify-content-end">
             <Button variant="primary" type="submit">
