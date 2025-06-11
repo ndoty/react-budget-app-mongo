@@ -17,12 +17,11 @@ const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget-api.techni
 
 export const UNCATEGORIZED_BUDGET_ID = "Uncategorized";
 
-// MODIFIED: Define default empty arrays outside the component.
-// This gives them a stable reference and prevents them from being re-created on every render,
-// which solves the infinite loop in the useMongo hook.
+// MODIFIED: Define default empty arrays outside the component for stable references
 const defaultBudgets = [];
 const defaultExpenses = [];
 const defaultMonthlyCap = [];
+const defaultIncome = []; // MODIFIED: Added for income
 
 export function useBudgets() {
   const context = useContext(BudgetsContext);
@@ -35,10 +34,10 @@ export function useBudgets() {
 export const BudgetsProvider = ({ children }) => {
   const { isAuthenticated, loading: authLoading, token } = useAuth();
 
-  // MODIFIED: Pass the stable default arrays to the useMongo hook.
   const [budgets, setBudgets] = useMongo("budgets", defaultBudgets);
   const [expenses, setExpenses] = useMongo("expenses", defaultExpenses);
   const [monthlyCap, setMonthlyCap] = useMongo("monthlyCap", defaultMonthlyCap);
+  const [income, setIncome] = useMongo("income", defaultIncome); // MODIFIED: Add income state
 
   useEffect(() => {
     if (!isAuthenticated || !token || authLoading) return;
@@ -68,63 +67,60 @@ export const BudgetsProvider = ({ children }) => {
         console.error("BudgetsContext WebSocket Error:", error);
         return;
     }
+    
     const refetchAllData = async () => {
       if (isAuthenticated && token) {
         const budgetsData = await fetchDataFromAPI("budgets", token);
         setBudgets(Array.isArray(budgetsData) ? budgetsData : []);
+        
         const expensesData = await fetchDataFromAPI("expenses", token);
         setExpenses(Array.isArray(expensesData) ? expensesData : []);
+        
         const capData = await fetchDataFromAPI("monthlyCap", token);
         setMonthlyCap(Array.isArray(capData) ? capData : []);
+        
+        // MODIFIED: Also refetch income data
+        const incomeData = await fetchDataFromAPI("income", token);
+        setIncome(Array.isArray(incomeData) ? incomeData : []);
       }
     };
+
     socket.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-        if (message.type && message.type.includes('_UPDATED')) {
+        // MODIFIED: Listen for INCOME_DATA_UPDATED as well
+        if (message.type && (message.type.includes('_UPDATED'))) {
           refetchAllData();
         }
       } catch (e) {}
     };
+
     return () => {
       if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
         socket.close();
       }
     };
-  }, [isAuthenticated, token, authLoading, setBudgets, setExpenses, setMonthlyCap]);
+  }, [isAuthenticated, token, authLoading, setBudgets, setExpenses, setMonthlyCap, setIncome]); // MODIFIED: Added setIncome
 
   function getBudgetExpenses(budgetId) { return Array.isArray(expenses) ? expenses.filter((expense) => expense.budgetId === budgetId) : []; }
   function getBudget(id) { return Array.isArray(budgets) ? budgets.find(b => b.id === id) : undefined; }
   function getExpense(id) { return Array.isArray(expenses) ? expenses.find(e => e.id === id) : undefined; }
+  
   async function addExpense({ description, amount, budgetId }) { await postSingleItemToAPI("expenses", { id: uuidV4(), description, amount, budgetId }, token); }
   async function addBudget({ name, max }) { if (Array.isArray(budgets) && budgets.find((b) => b.name === name)) { return alert("Budget with this name already exists."); } await postSingleItemToAPI("budgets", { id: uuidV4(), name, max }, token); }
   async function deleteBudget({ id }) { await deleteItemFromAPI("budgets", id, token); }
   async function deleteExpense({ id }) { await deleteItemFromAPI("expenses", id, token); }
-  
-  async function updateBudget({ id, ...updates }) {
-    if (!id) return;
-    try {
-      await axios.put(`${API_URL_BASE}/budgets/${id}`, updates, { headers: { Authorization: `Bearer ${token}` } });
-    } catch (error) {
-      console.error("Failed to update budget:", error);
-    }
+  async function updateBudget({ id, ...updates }) { if (!id) return; try { await axios.put(`${API_URL_BASE}/budgets/${id}`, updates, { headers: { Authorization: `Bearer ${token}` } }); } catch (error) { console.error("Failed to update budget:", error); } }
+  async function updateExpense({ id, ...updates }) { if (!id) return; try { await axios.put(`${API_URL_BASE}/expenses/${id}`, updates, { headers: { Authorization: `Bearer ${token}` } }); } catch (error) { console.error("Failed to update expense:", error); } }
+  async function setMonthlyCapTotal(capAmountStr) { const amount = parseFloat(capAmountStr); if (!isNaN(amount) && amount >= 0) { await postMonthlyCapToAPI({ cap: amount }, token); } }
+
+  // MODIFIED: Add functions for income
+  async function addIncome({ description, amount }) {
+    await postSingleItemToAPI("income", { id: uuidV4(), description, amount }, token);
   }
 
-  async function updateExpense({ id, ...updates }) {
-    if (!id) return;
-    try {
-      await axios.put(`${API_URL_BASE}/expenses/${id}`, updates, { headers: { Authorization: `Bearer ${token}` } });
-    } catch (error) {
-      console.error("Failed to update expense:", error);
-    }
-  }
-
-  async function setMonthlyCapTotal(capAmountStr) {
-    const amount = parseFloat(capAmountStr);
-    let capDataPayload = {};
-    if (!isNaN(amount) && amount >= 0) capDataPayload = { cap: amount };
-    else { return console.error("Invalid cap amount:", capAmountStr); }
-    await postMonthlyCapToAPI(capDataPayload, token);
+  async function deleteIncome({ id }) {
+    await deleteItemFromAPI("income", id, token);
   }
 
   if (authLoading) {
@@ -134,12 +130,22 @@ export const BudgetsProvider = ({ children }) => {
   return (
     <BudgetsContext.Provider
       value={{
-        budgets, expenses, monthlyCap,
-        getBudgetExpenses, getBudget, getExpense,
-        addExpense, addBudget,
-        deleteBudget, deleteExpense,
-        updateBudget, updateExpense,
+        budgets,
+        expenses,
+        monthlyCap,
+        income, // MODIFIED: Expose income
+        getBudgetExpenses,
+        getBudget,
+        getExpense,
+        addExpense,
+        addBudget,
+        deleteBudget,
+        deleteExpense,
+        updateBudget,
+        updateExpense,
         setMonthlyCapTotal,
+        addIncome, // MODIFIED: Expose addIncome
+        deleteIncome, // MODIFIED: Expose deleteIncome
       }}
     >
       {children}
