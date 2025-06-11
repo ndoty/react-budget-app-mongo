@@ -48,7 +48,6 @@ export default function BudgetCard({
         )}
         {!hideButtons && (
           <Stack direction="horizontal" gap="2" className="mt-4">
-            {/* MODIFIED: The Edit button will only show if onEditBudgetClick is provided */}
             {onEditBudgetClick && (
               <Button
                 variant="outline-info"
@@ -64,9 +63,12 @@ export default function BudgetCard({
             >
               Add Expense
             </Button>
-            <Button onClick={onViewExpensesClick} variant="outline-secondary">
-              View Expenses
-            </Button>
+            {/* MODIFIED: This button will only render if there are expenses */}
+            {amount > 0 && (
+              <Button onClick={onViewExpensesClick} variant="outline-secondary">
+                View Expenses
+              </Button>
+            )}
           </Stack>
         )}
       </Card.Body>
