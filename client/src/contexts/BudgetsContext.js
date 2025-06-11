@@ -47,7 +47,6 @@ export const BudgetsProvider = ({ children }) => {
       return;
     }
 
-    // Use environment variable for WebSocket URL, with a fallback
     const WS_URL = process.env.REACT_APP_WS_URL || "wss://budget-api.technickservices.com/ws";
     const ws = new WebSocket(WS_URL);
 
@@ -92,14 +91,12 @@ export const BudgetsProvider = ({ children }) => {
       console.error("CLIENT WebSocket: Error:", error);
     };
 
-    // Cleanup on component unmount or user logout
     return () => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.close();
       }
     };
   }, [isAuthenticated, token, setBudgets, setExpenses, setIncome]);
-
 
   function getBudgetExpenses(budgetId) {
     return Array.isArray(expenses)
@@ -125,11 +122,14 @@ export const BudgetsProvider = ({ children }) => {
     return Array.isArray(expenses) ? expenses.find(e => e.id === expenseId) : undefined;
   }
 
+  // --- MODIFIED DATA FUNCTIONS ---
+  // All functions now only make the API call. The local state update
+  // is handled by the WebSocket listener for all clients simultaneously.
+
   async function addExpense({ description, amount, budgetId, isBill }) {
     if (!isAuthenticated || !token) return;
     const newExpense = { id: uuidV4(), description, amount, budgetId, isBill };
     await postSingleItemToAPI("expenses", newExpense, token);
-    // No need to set state here; WebSocket will trigger a refetch for all clients
   }
   
   async function addIncome({ description, amount }) {
