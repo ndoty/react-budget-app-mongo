@@ -3,27 +3,35 @@ import { currencyFormatter } from "../utils";
 import { useBudgets } from "../contexts/BudgetsContext";
 
 export default function TotalBudgetCard() {
-  const { expenses, income, budgets } = useBudgets();
+  const { expenses, income, budgets, getBudgetExpenses, UNCATEGORIZED_BUDGET_ID } = useBudgets();
 
-  // 1. Calculate all the totals
-  const totalExpenses = expenses.reduce(
-    (total, expense) => total + expense.amount, 0
-  );
+  // 1. Calculate Total Income
   const totalIncome = income.reduce(
     (total, item) => total + item.amount, 0
   );
-  const totalBudgetMax = budgets.reduce(
-    (total, budget) => total + budget.max, 0
+
+  // 2. Calculate the "effective spend" for all categorized budgets
+  const totalObligationFromBudgets = budgets.reduce((total, budget) => {
+    const spentInBudget = getBudgetExpenses(budget.id).reduce(
+      (sum, expense) => sum + expense.amount, 0
+    );
+    // For each budget, the amount to account for is the greater of what was spent or what was budgeted
+    const effectiveSpend = Math.max(spentInBudget, budget.max);
+    return total + effectiveSpend;
+  }, 0);
+
+  // 3. Calculate spending for the "Uncategorized" budget (this always counts as spent)
+  const uncategorizedSpent = getBudgetExpenses(UNCATEGORIZED_BUDGET_ID).reduce(
+    (total, expense) => total + expense.amount, 0
   );
 
-  // 2. Determine the amount to subtract based on your logic:
-  //    Use the actual expenses OR the total budgeted amount, whichever is HIGHER.
-  const amountToSubtract = Math.max(totalExpenses, totalBudgetMax);
+  // 4. The final amount to subtract from income
+  const totalAmountToSubtract = totalObligationFromBudgets + uncategorizedSpent;
 
-  // 3. Calculate the final balance
-  const balance = totalIncome - amountToSubtract;
+  // 5. The final balance
+  const balance = totalIncome - totalAmountToSubtract;
 
-  // Determine card style based on whether the final balance is positive or negative
+  // Determine card style based on the final balance
   const cardStyle = {};
   if (balance < 0) {
     cardStyle.backgroundColor = 'rgba(255, 0, 0, 0.1)';
@@ -33,8 +41,8 @@ export default function TotalBudgetCard() {
     cardStyle.borderColor = 'rgba(0, 255, 0, 0.2)';
   }
 
-  // Do not render the card at all if there has been no financial activity
-  if (totalIncome === 0 && totalExpenses === 0 && totalBudgetMax === 0) {
+  // Do not render the card if there is no activity at all
+  if (totalIncome === 0 && totalAmountToSubtract === 0) {
     return null;
   }
 
@@ -47,25 +55,16 @@ export default function TotalBudgetCard() {
             {currencyFormatter.format(balance)}
           </div>
         </Card.Title>
-        <div className="text-muted fs-6 mt-1" style={{ fontStyle: 'italic' }}>
-          (Income - greater of Spent or Budgeted)
-        </div>
         <hr />
-        {/* MODIFIED: Updated the breakdown display */}
         <Stack direction="vertical" gap="2" className="mt-2">
             <div className="d-flex justify-content-between">
                 <span>Total Income:</span>
                 <span className="text-success">+{currencyFormatter.format(totalIncome)}</span>
             </div>
             <div className="d-flex justify-content-between">
-                <span>Total Budgeted:</span>
-                <span>{currencyFormatter.format(totalBudgetMax)}</span>
-            </div>
-            <div className="d-flex justify-content-between">
-                <span>Total Spent:</span>
-                {/* Highlight in red if expenses have exceeded the budgeted amount */}
-                <span style={{ color: totalExpenses > totalBudgetMax ? 'red' : 'inherit' }}>
-                  {currencyFormatter.format(totalExpenses)}
+                <span>Total Obligations (Spent/Budgeted):</span>
+                <span className="text-danger">
+                  - {currencyFormatter.format(totalAmountToSubtract)}
                 </span>
             </div>
         </Stack>
