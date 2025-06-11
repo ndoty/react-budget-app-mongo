@@ -18,11 +18,15 @@ const expenseSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  budgetId: { // This will now hold a budget's ID, "Uncategorized", or "Bills"
+  budgetId: { 
     type: String,
     required: true,
   },
-  // The 'isBill' field has been removed.
+  isBill: { // Ensure this field is present
+    type: Boolean,
+    required: true,
+    default: false,
+  },
 });
 
 module.exports = mongoose.model("Expense", expenseSchema);
