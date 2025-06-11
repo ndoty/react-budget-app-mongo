@@ -11,10 +11,9 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
   const totalBills = (getBillExpenses() || []).reduce((total, expense) => total + expense.amount, 0);
   const totalBudgetMax = (budgets || []).reduce((total, budget) => total + budget.max, 0);
   
-  // The Overall Balance is your total income minus your total spending.
   const balance = totalIncome - totalExpenses;
 
-  // --- Card Styling (no changes here) ---
+  // --- Card Styling ---
   const cardStyle = {};
   if (balance < 0) {
     cardStyle.backgroundColor = 'rgba(255, 0, 0, 0.1)';
@@ -39,15 +38,17 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
           </div>
         </Card.Title>
         <hr />
-        {/* This breakdown provides the detailed view of your finances */}
         <Stack direction="vertical" gap="2" className="mt-2">
             <div className="d-flex justify-content-between">
                 <span>Total Income:</span>
                 <span className="text-success">+{currencyFormatter.format(totalIncome)}</span>
             </div>
+            {/* MODIFIED: "Total Budgeted" is now styled like other expenses */}
             <div className="d-flex justify-content-between">
                 <span>Total Budgeted:</span>
-                <span>{currencyFormatter.format(totalBudgetMax)}</span>
+                <span className="text-danger">
+                  - {currencyFormatter.format(totalBudgetMax)}
+                </span>
             </div>
             <div className="d-flex justify-content-between">
                 <span>Total Bills:</span>
