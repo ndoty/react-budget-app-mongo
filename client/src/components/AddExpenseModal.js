@@ -6,15 +6,16 @@ export default function AddExpenseModal({ show, handleClose, defaultBudgetId }) 
   const descriptionRef = useRef();
   const amountRef = useRef();
   const budgetIdRef = useRef();
+  const isBillRef = useRef(); // MODIFIED: Add ref for the checkbox
   const { addExpense, budgets } = useBudgets();
 
-  // MODIFIED: Make handleSubmit async to await the addExpense call
   async function handleSubmit(e) {
     e.preventDefault();
     await addExpense({
       description: descriptionRef.current.value,
       amount: parseFloat(amountRef.current.value),
       budgetId: budgetIdRef.current.value,
+      isBill: isBillRef.current.checked, // MODIFIED: Pass the checkbox value
     });
     handleClose();
   }
@@ -43,7 +44,6 @@ export default function AddExpenseModal({ show, handleClose, defaultBudgetId }) 
           <Form.Group className="mb-3" controlId="budgetId">
             <Form.Label>Budget</Form.Label>
             <Form.Select defaultValue={defaultBudgetId} ref={budgetIdRef}>
-              {/* MODIFIED: Use the value attribute for the Uncategorized option */}
               <option value={UNCATEGORIZED_BUDGET_ID}>Uncategorized</option>
               {budgets.map(budget => (
                 <option key={budget.id} value={budget.id}>
@@ -51,6 +51,14 @@ export default function AddExpenseModal({ show, handleClose, defaultBudgetId }) 
                 </option>
               ))}
             </Form.Select>
+          </Form.Group>
+          {/* MODIFIED: Add checkbox for marking as a bill */}
+          <Form.Group className="mb-3" controlId="isBill">
+            <Form.Check
+              type="checkbox"
+              ref={isBillRef}
+              label="Is this a recurring bill?"
+            />
           </Form.Group>
           <div className="d-flex justify-content-end">
             <Button variant="primary" type="submit">
