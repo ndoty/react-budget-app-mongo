@@ -29,7 +29,6 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
   const totalBudgetMaxDisplay = allBudgets.reduce((total, budget) => total + budget.max, 0);
   const totalUncategorizedDisplay = getBudgetExpenses(UNCATEGORIZED_BUDGET_ID).reduce((total, expense) => total + expense.amount, 0);
 
-  // MODIFIED: Calculate the total amount over all budgets
   const totalOverbudgetAmount = allBudgets.reduce((total, budget) => {
     const expensesForBudget = allExpenses.filter(e => e.budgetId === budget.id);
     const amountSpent = expensesForBudget.reduce((t, e) => t + e.amount, 0);
@@ -89,12 +88,12 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
                   - {currencyFormatter.format(totalUncategorizedDisplay)}
                 </span>
             </div>
-            {/* MODIFIED: Add a new line for the overbudget amount, only if it's greater than 0 */}
             {totalOverbudgetAmount > 0 && (
               <div className="d-flex justify-content-between">
                   <span>Amount Overbudget:</span>
-                  <span className="text-warning">
-                    {currencyFormatter.format(totalOverbudgetAmount)}
+                  {/* MODIFIED: Changed text color to red and added a negative sign */}
+                  <span className="text-danger">
+                    - {currencyFormatter.format(totalOverbudgetAmount)}
                   </span>
               </div>
             )}
