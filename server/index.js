@@ -126,7 +126,7 @@ app.put("/api/expenses/:id", authMiddleware, async (req, res) => {
     const { description, amount, budgetId, isBill } = req.body;
     const updatedExpense = await Expense.findOneAndUpdate(
       { id: req.params.id, userId: req.userId }, 
-      { description, amount, budgetId, isBill }, // Pass isBill to the update
+      { description, amount, budgetId, isBill: !!isBill }, // Pass isBill to the update
       { new: true }
     );
     if (!updatedExpense) return res.status(404).json({ msg: "Expense not found" });
