@@ -8,6 +8,8 @@ import AddExpenseModal from "./components/AddExpenseModal";
 import AddIncomeModal from "./components/AddIncomeModal";
 import ViewExpensesModal from "./components/ViewExpensesModal";
 import ViewIncomeModal from "./components/ViewIncomeModal";
+import ViewBillsModal from "./components/ViewBillsModal";
+import EditBudgetModal from "./components/EditBudgetModal";
 import EditExpenseModal from "./components/EditExpenseModal";
 import EditIncomeModal from "./components/EditIncomeModal";
 import BudgetCard from "./components/BudgetCard";
@@ -16,10 +18,10 @@ import TotalBudgetCard from "./components/TotalBudgetCard";
 import BillsCard from "./components/BillsCard";
 
 // Contexts & Hooks
-import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider, BILLS_BUDGET_ID } from "./contexts/BudgetsContext";
+import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 
-// --- Authentication Pages ---
+// --- Authentication Pages (no changes) ---
 function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -124,8 +126,10 @@ function BudgetAppContent() {
   const [viewExpensesModalBudgetId, setViewExpensesModalBudgetId] = useState();
   const [addExpenseModalBudgetId, setAddExpenseModalBudgetId] = useState();
   const [showViewIncomeModal, setShowViewIncomeModal] = useState(false);
+  const [showViewBillsModal, setShowViewBillsModal] = useState(false);
   const [editIncomeModalId, setEditIncomeModalId] = useState();
   const [editExpenseId, setEditExpenseId] = useState();
+  const [editBudgetModalId, setEditBudgetModalId] = useState(); // State for Edit Budget Modal
 
   const { budgets, getBudgetExpenses } = useBudgets();
   const { logout, currentUser } = useAuth();
@@ -163,7 +167,11 @@ function BudgetAppContent() {
           <Button variant="outline-primary" onClick={openAddExpenseModal}>Add Expense</Button>
         </Stack>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
-          <TotalBudgetCard onViewIncomeClick={() => setShowViewIncomeModal(true)} />
+          {/* MODIFIED: Pass onViewBillsClick prop */}
+          <TotalBudgetCard 
+            onViewIncomeClick={() => setShowViewIncomeModal(true)} 
+            onViewBillsClick={() => setShowViewBillsModal(true)}
+          />
           { Array.isArray(budgets) && budgets.map((budget) => {
             const amount = getBudgetExpenses(budget.id).reduce((total, expense) => total + expense.amount, 0);
             return (
@@ -174,11 +182,12 @@ function BudgetAppContent() {
                 max={budget.max}
                 onAddExpenseClick={() => openAddExpenseModal(budget.id)}
                 onViewExpensesClick={() => setViewExpensesModalBudgetId(budget.id)}
+                onEditBudgetClick={() => setEditBudgetModalId(budget.id)} // Pass the handler
               />
             );
           })}
-          <BillsCard onViewExpensesClick={() => setViewExpensesModalBudgetId(BILLS_BUDGET_ID)} />
-          <UncategorizedBudgetCard onAddExpenseClick={() => openAddExpenseModal(UNCATEGORIZED_BUDGET_ID)} onViewExpensesClick={() => setViewExpensesModalBudgetId(UNCATEGORIZED_BUDGET_ID)} />
+          <BillsCard onViewBillsClick={() => setShowViewBillsModal(true)} />
+          <UncategorizedBudgetCard onAddExpenseClick={() => openAddExpenseModal()} onViewExpensesClick={() => setViewExpensesModalBudgetId(UNCATEGORIZED_BUDGET_ID)} />
         </div>
       </Container>
       <AddBudgetModal show={showAddBudgetModal} handleClose={() => setShowAddBudgetModal(false)} />
@@ -187,7 +196,10 @@ function BudgetAppContent() {
       <ViewExpensesModal 
         budgetId={viewExpensesModalBudgetId} 
         handleClose={() => setViewExpensesModalBudgetId()}
-        onEditExpenseClick={(id) => setEditExpenseId(id)}
+        onEditExpenseClick={(id) => {
+          setViewExpensesModalBudgetId();
+          setEditExpenseId(id);
+        }}
       />
       <ViewIncomeModal 
         show={showViewIncomeModal} 
@@ -196,6 +208,20 @@ function BudgetAppContent() {
             setShowViewIncomeModal(false);
             setEditIncomeModalId(id);
         }}
+      />
+      <ViewBillsModal 
+        show={showViewBillsModal} 
+        handleClose={() => setShowViewBillsModal(false)}
+        onEditExpenseClick={(id) => {
+          setShowViewBillsModal(false);
+          setEditExpenseId(id);
+        }}
+      />
+      {/* MODIFIED: Render the EditBudgetModal */}
+      <EditBudgetModal
+        show={editBudgetModalId != null}
+        handleClose={() => setEditBudgetModalId(null)}
+        budgetId={editBudgetModalId}
       />
       <EditExpenseModal
         show={editExpenseId != null}
@@ -211,7 +237,7 @@ function BudgetAppContent() {
   );
 }
 
-// --- Protected Route Component ---
+// --- Protected Route and Main App (no changes) ---
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
   if (loading) {
@@ -223,7 +249,6 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-// --- Main App Component ---
 function App() {
   return (
     <Router>
