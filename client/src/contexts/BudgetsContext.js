@@ -95,12 +95,25 @@ export const BudgetsProvider = ({ children }) => {
   function getExpense(id) { return Array.isArray(expenses) ? expenses.find(e => e.id === id) : undefined; }
   function getIncomeItem(id) { return Array.isArray(income) ? income.find(i => i.id === id) : undefined; }
   
-  async function addExpense({ description, amount, budgetId }) { await postSingleItemToAPI("expenses", { id: uuidV4(), description, amount, budgetId }, token); }
+  // MODIFIED: addExpense now accepts isBill
+  async function addExpense({ description, amount, budgetId, isBill }) {
+    await postSingleItemToAPI("expenses", { id: uuidV4(), description, amount, budgetId, isBill }, token);
+  }
+  
   async function addBudget({ name, max }) { if (Array.isArray(budgets) && budgets.find((b) => b.name === name)) { return alert("Budget with this name already exists."); } await postSingleItemToAPI("budgets", { id: uuidV4(), name, max }, token); }
   async function deleteBudget({ id }) { await deleteItemFromAPI("budgets", id, token); }
   async function deleteExpense({ id }) { await deleteItemFromAPI("expenses", id, token); }
   async function updateBudget({ id, ...updates }) { if (!id) return; try { await axios.put(`${API_URL_BASE}/budgets/${id}`, updates, { headers: { Authorization: `Bearer ${token}` } }); } catch (error) { console.error("Failed to update budget:", error); } }
-  async function updateExpense({ id, ...updates }) { if (!id) return; try { await axios.put(`${API_URL_BASE}/expenses/${id}`, updates, { headers: { Authorization: `Bearer ${token}` } }); } catch (error) { console.error("Failed to update expense:", error); } }
+
+  // MODIFIED: updateExpense now accepts isBill
+  async function updateExpense({ id, ...updates }) {
+    if (!id) return;
+    try {
+      await axios.put(`${API_URL_BASE}/expenses/${id}`, updates, { headers: { Authorization: `Bearer ${token}` } });
+    } catch (error) {
+      console.error("Failed to update expense:", error);
+    }
+  }
   
   async function addIncome({ description, amount }) { await postSingleItemToAPI("income", { id: uuidV4(), description, amount }, token); }
   async function deleteIncome({ id }) { await deleteItemFromAPI("income", id, token); }
@@ -129,7 +142,7 @@ export const BudgetsProvider = ({ children }) => {
         addIncome,
         deleteIncome,
         updateIncome,
-        UNCATEGORIZED_BUDGET_ID, // MODIFIED: Expose the constant
+        UNCATEGORIZED_BUDGET_ID,
       }}
     >
       {children}
