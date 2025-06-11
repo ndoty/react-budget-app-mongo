@@ -12,6 +12,9 @@ import useMongo, {
 
 import { useAuth } from "./AuthContext";
 
+// Define the empty array outside the component to ensure it has a stable reference.
+const EMPTY_ARRAY = [];
+
 const BudgetsContext = createContext(undefined);
 
 export const UNCATEGORIZED_BUDGET_ID = "Uncategorized";
@@ -28,15 +31,16 @@ export function useBudgets() {
 export const BudgetsProvider = ({ children }) => {
   const { isAuthenticated, loading: authLoading, token } = useAuth();
 
-  const [budgets, setBudgets] = useMongo("budgets", []);
-  const [expenses, setExpenses] = useMongo("expenses", []);
-  const [income, setIncome] = useMongo("income", []);
+  // Use the stable EMPTY_ARRAY constant for the initial value.
+  const [budgets, setBudgets] = useMongo("budgets", EMPTY_ARRAY);
+  const [expenses, setExpenses] = useMongo("expenses", EMPTY_ARRAY);
+  const [income, setIncome] = useMongo("income", EMPTY_ARRAY);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      setBudgets([]);
-      setExpenses([]);
-      setIncome([]);
+      setBudgets(EMPTY_ARRAY);
+      setExpenses(EMPTY_ARRAY);
+      setIncome(EMPTY_ARRAY);
     }
   }, [isAuthenticated, authLoading, setBudgets, setExpenses, setIncome]);
 
@@ -51,9 +55,9 @@ export const BudgetsProvider = ({ children }) => {
   }
     
   function getBudget(budgetId) {
-      return Array.isArray(budgets) ? budgets.find((b) => b.id === budgetId) : undefined;
+    return Array.isArray(budgets) ? budgets.find((b) => b.id === budgetId) : undefined;
   }
-
+  
   function getExpense(expenseId) {
     return Array.isArray(expenses) ? expenses.find(e => e.id === expenseId) : undefined;
   }
