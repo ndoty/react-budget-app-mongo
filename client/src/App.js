@@ -19,7 +19,6 @@ import UncategorizedBudgetCard from "./components/UncategorizedBudgetCard";
 import TotalBudgetCard from "./components/TotalBudgetCard";
 
 // Contexts & Hooks
-// MODIFIED: Added useBudgets back to the import list
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 
@@ -110,7 +109,6 @@ function BudgetAppContent() {
   const [showEditIncomeModal, setShowEditIncomeModal] = useState(false);
   const [editIncomeId, setEditIncomeId] = useState(null);
 
-  // This line requires 'useBudgets' to be imported
   const { budgets, getBudgetExpenses } = useBudgets();
   const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
@@ -139,12 +137,21 @@ function BudgetAppContent() {
       <Container className="my-4">
         <Stack direction="horizontal" gap="2" className="mb-4">
           <h1 className="me-auto">Budgets</h1>
-          {/* "Set Monthly Cap" button removed */}
           <Button variant="primary" onClick={() => setShowAddBudgetModal(true)}>Add Budget</Button>
           <Button variant="outline-primary" onClick={() => openAddExpenseModal()}>Add Expense</Button>
           <Button variant="success" onClick={() => setShowAddIncomeModal(true)}>Add Income</Button>
         </Stack>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
+          
+          {/* MODIFIED: Cards are now in the requested order */}
+          
+          {/* 1. Overall Balance */}
+          <TotalBudgetCard />
+
+          {/* 2. Total Income */}
+          <IncomeCard onViewIncomeClick={() => setShowViewIncomeModal(true)} />
+
+          {/* 3. All Budgets */}
           { Array.isArray(budgets) && budgets.map((budget) => {
             const amount = getBudgetExpenses(budget.id).reduce((total, expense) => total + expense.amount, 0);
             return (
@@ -159,9 +166,10 @@ function BudgetAppContent() {
               />
             );
           })}
+
+          {/* 4. Uncategorized */}
           <UncategorizedBudgetCard onAddExpenseClick={() => openAddExpenseModal(UNCATEGORIZED_BUDGET_ID)} onViewExpensesClick={() => setViewExpensesModalBudgetId(UNCATEGORIZED_BUDGET_ID)} />
-          <IncomeCard onViewIncomeClick={() => setShowViewIncomeModal(true)} />
-          <TotalBudgetCard />
+
         </div>
       </Container>
 
