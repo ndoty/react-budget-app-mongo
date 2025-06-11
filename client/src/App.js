@@ -5,27 +5,127 @@ import { Button, Stack, Container, Nav, Navbar, Form } from "react-bootstrap";
 // Components
 import AddBudgetModal from "./components/AddBudgetModal";
 import AddExpenseModal from "./components/AddExpenseModal";
+import AddIncomeModal from "./components/AddIncomeModal";
 import ViewExpensesModal from "./components/ViewExpensesModal";
+import ViewIncomeModal from "./components/ViewIncomeModal";
+import EditExpenseModal from "./components/EditExpenseModal";
+import EditIncomeModal from "./components/EditIncomeModal";
 import BudgetCard from "./components/BudgetCard";
 import UncategorizedBudgetCard from "./components/UncategorizedBudgetCard";
 import TotalBudgetCard from "./components/TotalBudgetCard";
-import BillsCard from "./components/BillsCard"; // MODIFIED: Import the new BillsCard
+import BillsCard from "./components/BillsCard";
 
 // Contexts & Hooks
-// MODIFIED: Import BILLS_BUDGET_ID
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider, BILLS_BUDGET_ID } from "./contexts/BudgetsContext";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 
 // --- Authentication Pages ---
-function LoginPage() { /* ... (no changes) ... */ }
-function RegisterPage() { /* ... (no changes) ... */ }
+function LoginPage() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    const { success, message } = await login(username, password);
+    if (success) {
+      navigate("/");
+    } else {
+      setError(message);
+    }
+  };
+
+  return (
+    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: "100vh" }}>
+      <div className="w-100" style={{ maxWidth: "400px" }}>
+        <h2 className="text-center mb-4">Log In</h2>
+        {error && <div className="alert alert-danger">{error}</div>}
+        <Form onSubmit={handleSubmit}>
+          <Form.Group id="username">
+            <Form.Label>Username</Form.Label>
+            <Form.Control type="text" value={username} onChange={e => setUsername(e.target.value)} required />
+          </Form.Group>
+          <Form.Group id="password">
+            <Form.Label>Password</Form.Label>
+            <Form.Control type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+          </Form.Group>
+          <Button className="w-100 mt-3" type="submit">Log In</Button>
+        </Form>
+        <div className="w-100 text-center mt-2">
+          Need an account? <Link to="/register">Register</Link>
+        </div>
+      </div>
+    </Container>
+  );
+}
+
+function RegisterPage() {
+  const { register } = useAuth();
+  const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      return setError("Passwords do not match");
+    }
+    setError('');
+    setMessage('');
+    const { success, message: regMessage } = await register(username, password);
+    if (success) {
+      setMessage("Registration successful! You can now log in.");
+      setTimeout(() => navigate("/login"), 2000);
+    } else {
+      setError(regMessage);
+    }
+  };
+
+  return (
+    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: "100vh" }}>
+      <div className="w-100" style={{ maxWidth: "400px" }}>
+        <h2 className="text-center mb-4">Register</h2>
+        {error && <div className="alert alert-danger">{error}</div>}
+        {message && <div className="alert alert-success">{message}</div>}
+        <Form onSubmit={handleSubmit}>
+          <Form.Group id="username">
+            <Form.Label>Username</Form.Label>
+            <Form.Control type="text" value={username} onChange={e => setUsername(e.target.value)} required />
+          </Form.Group>
+          <Form.Group id="password">
+            <Form.Label>Password</Form.Label>
+            <Form.Control type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+          </Form.Group>
+          <Form.Group id="confirm-password">
+            <Form.Label>Confirm Password</Form.Label>
+            <Form.Control type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+          </Form.Group>
+          <Button className="w-100 mt-3" type="submit">Register</Button>
+        </Form>
+        <div className="w-100 text-center mt-2">
+          Already have an account? <Link to="/login">Log In</Link>
+        </div>
+      </div>
+    </Container>
+  );
+}
 
 // --- Main application component for budgets ---
 function BudgetAppContent() {
   const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
+  const [showAddIncomeModal, setShowAddIncomeModal] = useState(false);
   const [viewExpensesModalBudgetId, setViewExpensesModalBudgetId] = useState();
   const [addExpenseModalBudgetId, setAddExpenseModalBudgetId] = useState();
+  const [showViewIncomeModal, setShowViewIncomeModal] = useState(false);
+  const [editIncomeModalId, setEditIncomeModalId] = useState();
+  const [editExpenseId, setEditExpenseId] = useState();
 
   const { budgets, getBudgetExpenses } = useBudgets();
   const { logout, currentUser } = useAuth();
@@ -36,7 +136,10 @@ function BudgetAppContent() {
     setAddExpenseModalBudgetId(budgetId);
   }
 
-  const handleLogout = () => { logout(); navigate("/login"); };
+  function handleLogout() {
+    logout();
+    navigate("/login");
+  }
 
   return (
     <>
@@ -56,10 +159,11 @@ function BudgetAppContent() {
         <Stack direction="horizontal" gap="2" className="mb-4">
           <h1 className="me-auto">Budgets</h1>
           <Button variant="primary" onClick={() => setShowAddBudgetModal(true)}>Add Budget</Button>
-          <Button variant="outline-primary" onClick={() => openAddExpenseModal()}>Add Expense</Button>
+          <Button variant="success" onClick={() => setShowAddIncomeModal(true)}>Add Income</Button>
+          <Button variant="outline-primary" onClick={openAddExpenseModal}>Add Expense</Button>
         </Stack>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
-          <TotalBudgetCard />
+          <TotalBudgetCard onViewIncomeClick={() => setShowViewIncomeModal(true)} />
           { Array.isArray(budgets) && budgets.map((budget) => {
             const amount = getBudgetExpenses(budget.id).reduce((total, expense) => total + expense.amount, 0);
             return (
@@ -73,14 +177,36 @@ function BudgetAppContent() {
               />
             );
           })}
-          {/* MODIFIED: Add the new BillsCard, which will open the existing ViewExpensesModal */}
           <BillsCard onViewExpensesClick={() => setViewExpensesModalBudgetId(BILLS_BUDGET_ID)} />
           <UncategorizedBudgetCard onAddExpenseClick={() => openAddExpenseModal(UNCATEGORIZED_BUDGET_ID)} onViewExpensesClick={() => setViewExpensesModalBudgetId(UNCATEGORIZED_BUDGET_ID)} />
         </div>
       </Container>
       <AddBudgetModal show={showAddBudgetModal} handleClose={() => setShowAddBudgetModal(false)} />
       <AddExpenseModal show={showAddExpenseModal} defaultBudgetId={addExpenseModalBudgetId} handleClose={() => setShowAddExpenseModal(false)} />
-      <ViewExpensesModal budgetId={viewExpensesModalBudgetId} handleClose={() => setViewExpensesModalBudgetId()} />
+      <AddIncomeModal show={showAddIncomeModal} handleClose={() => setShowAddIncomeModal(false)} />
+      <ViewExpensesModal 
+        budgetId={viewExpensesModalBudgetId} 
+        handleClose={() => setViewExpensesModalBudgetId()}
+        onEditExpenseClick={(id) => setEditExpenseId(id)}
+      />
+      <ViewIncomeModal 
+        show={showViewIncomeModal} 
+        handleClose={() => setShowViewIncomeModal(false)}
+        onEditIncomeClick={(id) => {
+            setShowViewIncomeModal(false);
+            setEditIncomeModalId(id);
+        }}
+      />
+      <EditExpenseModal
+        show={editExpenseId != null}
+        handleClose={() => setEditExpenseId(null)}
+        expenseId={editExpenseId}
+      />
+      <EditIncomeModal
+        show={editIncomeModalId != null}
+        handleClose={() => setEditIncomeModalId(null)}
+        incomeId={editIncomeModalId}
+      />
     </>
   );
 }
