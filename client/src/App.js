@@ -11,14 +11,13 @@ import EditExpenseModal from "./components/EditExpenseModal";
 import MoveExpenseModal from "./components/MoveExpenseModal";
 import ViewExpensesModal from "./components/ViewExpensesModal";
 import AddIncomeModal from "./components/AddIncomeModal";
-import IncomeCard from "./components/IncomeCard";
 import ViewIncomeModal from "./components/ViewIncomeModal";
 import EditIncomeModal from "./components/EditIncomeModal";
+import BillsCard from "./components/BillsCard";
+import ViewBillsModal from "./components/ViewBillsModal";
 import BudgetCard from "./components/BudgetCard";
 import UncategorizedBudgetCard from "./components/UncategorizedBudgetCard";
 import TotalBudgetCard from "./components/TotalBudgetCard";
-import BillsCard from "./components/BillsCard"; // MODIFIED: Import the new BillsCard
-import ViewBillsModal from "./components/ViewBillsModal"; // MODIFIED: Import the new ViewBillsModal
 
 // Contexts & Hooks
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
@@ -49,8 +48,8 @@ function BudgetAppContent() {
   const [showEditIncomeModal, setShowEditIncomeModal] = useState(false);
   const [editIncomeId, setEditIncomeId] = useState(null);
   
-  // MODIFIED: Add state for the new bills modal
-  const [showViewBillsModal, setShowViewBillsModal] = useState(false);
+  // MODIFIED: Initialize state to null
+  const [showViewBillsModal, setShowViewBillsModal] = useState(null);
 
   const { budgets, getBudgetExpenses } = useBudgets();
   const { logout, currentUser } = useAuth();
@@ -87,10 +86,8 @@ function BudgetAppContent() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
           
           <TotalBudgetCard onViewIncomeClick={() => setShowViewIncomeModal(true)} />
-          
-          {/* MODIFIED: Add the new BillsCard to the layout */}
           <BillsCard onViewExpensesClick={() => setShowViewBillsModal(true)} />
-
+          
           { Array.isArray(budgets) && budgets.map((budget) => {
             const amount = getBudgetExpenses(budget.id).reduce((total, expense) => total + expense.amount, 0);
             return (
@@ -129,10 +126,9 @@ function BudgetAppContent() {
         onEditIncomeClick={openEditIncomeModal}
       />
 
-      {/* MODIFIED: Render the new ViewBillsModal */}
       <ViewBillsModal
         show={showViewBillsModal}
-        handleClose={() => setShowViewBillsModal(false)}
+        handleClose={() => setShowViewBillsModal(false)} // MODIFIED: Set to false, not null
         onEditExpenseClick={openEditExpenseModal}
       />
 
@@ -152,6 +148,26 @@ function BudgetAppContent() {
 }
 
 // --- Protected Route Component & Main App Component (unchanged) ---
-function ProtectedRoute({ children }) { /* ... */ }
-function App() { /* ... */ }
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) { return <Container className="my-4" style={{textAlign: 'center'}}><p>Authenticating...</p></Container>; }
+  if (!isAuthenticated) { return <Navigate to="/login" replace />; }
+  return children;
+}
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <BudgetsProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/" element={ <ProtectedRoute> <BudgetAppContent /> </ProtectedRoute> } />
+            <Route path="*" element={ <Navigate to="/login" replace />} />
+          </Routes>
+        </BudgetsProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
 export default App;
