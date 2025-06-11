@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const expenseSchema = new mongoose.Schema({
   userId: {
@@ -6,7 +6,7 @@ const expenseSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-  id: {
+  id: { // Client-side UUID
     type: String,
     required: true,
   },
@@ -18,18 +18,11 @@ const expenseSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  budgetId: {
+  budgetId: { // This will now hold a budget's ID, "Uncategorized", or "Bills"
     type: String,
     required: true,
   },
-  isBill: {
-    type: Boolean,
-    default: false,
-  },
-  date: {
-    type: Date,
-    default: Date.now,
-  },
+  // The 'isBill' field has been removed.
 });
 
-module.exports = mongoose.model('Expense', expenseSchema);
+module.exports = mongoose.model("Expense", expenseSchema);
