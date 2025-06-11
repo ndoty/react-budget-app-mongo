@@ -1,5 +1,5 @@
 import { Form, Modal, Button } from "react-bootstrap";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useBudgets, UNCATEGORIZED_BUDGET_ID, BILLS_BUDGET_ID } from "../contexts/BudgetsContext";
 
 export default function AddExpenseModal({
@@ -11,19 +11,31 @@ export default function AddExpenseModal({
   const amountRef = useRef();
   const budgetIdRef = useRef();
   const { addExpense, budgets } = useBudgets();
+  const [isBill, setIsBill] = useState(false);
 
   function handleSubmit(e) {
     e.preventDefault();
+    
+    // If it's a bill, the budgetId is "Bills". Otherwise, use the dropdown value.
+    const expenseBudgetId = isBill ? BILLS_BUDGET_ID : budgetIdRef.current.value;
+
     addExpense({
       description: descriptionRef.current.value,
       amount: parseFloat(amountRef.current.value),
-      budgetId: budgetIdRef.current.value,
+      budgetId: expenseBudgetId,
+      isBill: isBill,
     });
     handleClose();
   }
 
+  // Custom close handler to reset local state
+  const handleModalClose = () => {
+    setIsBill(false);
+    handleClose();
+  }
+
   return (
-    <Modal show={show} onHide={handleClose}>
+    <Modal show={show} onHide={handleModalClose}>
       <Form onSubmit={handleSubmit}>
         <Modal.Header closeButton>
           <Modal.Title>New Expense</Modal.Title>
@@ -43,11 +55,18 @@ export default function AddExpenseModal({
               step={0.01}
             />
           </Form.Group>
+          <Form.Group className="mb-3" controlId="isBill">
+            <Form.Check
+              type="checkbox"
+              checked={isBill}
+              onChange={(e) => setIsBill(e.target.checked)}
+              label="Is this a recurring bill?"
+            />
+          </Form.Group>
           <Form.Group className="mb-3" controlId="budgetId">
             <Form.Label>Budget</Form.Label>
-            {/* MODIFIED: Replaced checkbox with a dropdown option for "Bills" */}
-            <Form.Select defaultValue={defaultBudgetId} ref={budgetIdRef}>
-              <option value={BILLS_BUDGET_ID}>Bills</option>
+            {/* The dropdown is disabled if the expense is marked as a bill */}
+            <Form.Select defaultValue={defaultBudgetId} ref={budgetIdRef} disabled={isBill}>
               <option value={UNCATEGORIZED_BUDGET_ID}>Uncategorized</option>
               {budgets.map(budget => (
                 <option key={budget.id} value={budget.id}>
