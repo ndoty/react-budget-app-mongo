@@ -27,9 +27,19 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
   // --- Display Values (for the breakdown) ---
   const totalBillsDisplay = (getBillExpenses() || []).reduce((total, expense) => total + expense.amount, 0);
   const totalBudgetMaxDisplay = allBudgets.reduce((total, budget) => total + budget.max, 0);
-  // MODIFIED: Calculate only uncategorized spending for display
   const totalUncategorizedDisplay = getBudgetExpenses(UNCATEGORIZED_BUDGET_ID).reduce((total, expense) => total + expense.amount, 0);
 
+  // MODIFIED: Calculate the total amount over all budgets
+  const totalOverbudgetAmount = allBudgets.reduce((total, budget) => {
+    const expensesForBudget = allExpenses.filter(e => e.budgetId === budget.id);
+    const amountSpent = expensesForBudget.reduce((t, e) => t + e.amount, 0);
+    
+    if (amountSpent > budget.max) {
+      return total + (amountSpent - budget.max);
+    }
+    
+    return total;
+  }, 0);
 
   // --- Card Styling ---
   const cardStyle = {};
@@ -73,13 +83,21 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
                   - {currencyFormatter.format(totalBillsDisplay)}
                 </span>
             </div>
-            {/* MODIFIED: This now shows only Uncategorized spending */}
             <div className="d-flex justify-content-between">
                 <span>Total Uncategorized:</span>
                 <span className="text-danger">
                   - {currencyFormatter.format(totalUncategorizedDisplay)}
                 </span>
             </div>
+            {/* MODIFIED: Add a new line for the overbudget amount, only if it's greater than 0 */}
+            {totalOverbudgetAmount > 0 && (
+              <div className="d-flex justify-content-between">
+                  <span>Amount Overbudget:</span>
+                  <span className="text-warning">
+                    {currencyFormatter.format(totalOverbudgetAmount)}
+                  </span>
+              </div>
+            )}
         </Stack>
         <Stack direction="horizontal" gap="2" className="mt-4">
           <Button
