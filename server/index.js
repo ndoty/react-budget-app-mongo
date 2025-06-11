@@ -108,8 +108,8 @@ app.delete("/api/budgets/:id", authMiddleware, async (req, res) => {
 // Expenses Routes
 app.get("/api/expenses", authMiddleware, async (req, res) => {
   try {
-    // MODIFIED: Sort by createdAt field, newest first
-    const expenses = await Expense.find({ userId: req.userId }).sort({ createdAt: -1 });
+    // MODIFIED: Sort by updatedAt field to show most recent activity first
+    const expenses = await Expense.find({ userId: req.userId }).sort({ updatedAt: -1 });
     res.status(200).json(expenses);
   } catch (error) { console.error("GET /api/expenses Error:", error); res.status(500).json({ msg: "Server Error" }); }
 });
