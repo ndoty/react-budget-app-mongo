@@ -41,7 +41,6 @@ export default function BudgetCard({
             now={amount}
           />
         )}
-        {/* MODIFIED: Added div to show remaining budget */}
         {max && (
           <div className="text-muted fs-6 mt-1 text-end">
             {currencyFormatter.format(max - amount)} Remaining
@@ -49,12 +48,15 @@ export default function BudgetCard({
         )}
         {!hideButtons && (
           <Stack direction="horizontal" gap="2" className="mt-4">
-            <Button
-              variant="outline-info"
-              onClick={onEditBudgetClick}
-            >
-              Edit
-            </Button>
+            {/* MODIFIED: The Edit button will only show if onEditBudgetClick is provided */}
+            {onEditBudgetClick && (
+              <Button
+                variant="outline-info"
+                onClick={onEditBudgetClick}
+              >
+                Edit
+              </Button>
+            )}
             <Button
               variant="outline-primary"
               className="ms-auto"
