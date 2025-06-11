@@ -1,12 +1,12 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const expenseSchema = new mongoose.Schema({
-  userId: { // Added
+  userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  id: { // Client-side UUID
+  id: {
     type: String,
     required: true,
   },
@@ -18,10 +18,19 @@ const expenseSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  budgetId: { // Refers to client-side Budget.id
+  budgetId: {
     type: String,
     required: true,
   },
+  // MODIFIED: Added isBill field to track bills
+  isBill: {
+    type: Boolean,
+    default: false,
+  },
+  date: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
-module.exports = mongoose.model("Expense", expenseSchema);
+module.exports = mongoose.model('Expense', expenseSchema);
