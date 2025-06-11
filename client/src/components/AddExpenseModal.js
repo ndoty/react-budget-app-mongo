@@ -10,13 +10,13 @@ export default function AddExpenseModal({
   const descriptionRef = useRef();
   const amountRef = useRef();
   const budgetIdRef = useRef();
+  const dueDateRef = useRef();
   const { addExpense, budgets } = useBudgets();
   const [isBill, setIsBill] = useState(false);
 
   function handleSubmit(e) {
     e.preventDefault();
     
-    // If it's a bill, the budgetId is "Bills". Otherwise, use the dropdown value.
     const expenseBudgetId = isBill ? BILLS_BUDGET_ID : budgetIdRef.current.value;
 
     addExpense({
@@ -24,11 +24,11 @@ export default function AddExpenseModal({
       amount: parseFloat(amountRef.current.value),
       budgetId: expenseBudgetId,
       isBill: isBill,
+      dueDate: isBill ? parseInt(dueDateRef.current.value) : null,
     });
     handleClose();
   }
 
-  // Custom close handler to reset local state
   const handleModalClose = () => {
     setIsBill(false);
     handleClose();
@@ -63,9 +63,23 @@ export default function AddExpenseModal({
               label="Is this a recurring bill?"
             />
           </Form.Group>
+          
+          {isBill && (
+            <Form.Group className="mb-3" controlId="dueDate">
+              <Form.Label>Due Date (Day of Month)</Form.Label>
+              {/* MODIFIED: Reverted input to type="number" */}
+              <Form.Control
+                ref={dueDateRef}
+                type="number"
+                required
+                min={1}
+                max={31}
+              />
+            </Form.Group>
+          )}
+
           <Form.Group className="mb-3" controlId="budgetId">
             <Form.Label>Budget</Form.Label>
-            {/* The dropdown is disabled if the expense is marked as a bill */}
             <Form.Select defaultValue={defaultBudgetId} ref={budgetIdRef} disabled={isBill}>
               <option value={UNCATEGORIZED_BUDGET_ID}>Uncategorized</option>
               {budgets.map(budget => (
