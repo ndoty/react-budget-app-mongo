@@ -6,7 +6,7 @@ const expenseSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-  id: { // Client-side UUID
+  id: {
     type: String,
     required: true,
   },
@@ -27,7 +27,6 @@ const expenseSchema = new mongoose.Schema({
     required: true,
     default: false,
   },
-  // MODIFIED: Reverted dueDate type back to Number
   dueDate: {
     type: Number,
     min: 1,
