@@ -6,15 +6,13 @@ export default function EditExpenseModal({ show, handleClose, expenseId }) {
   const descriptionRef = useRef();
   const amountRef = useRef();
   const budgetIdRef = useRef();
+  const dueDateRef = useRef();
   const { updateExpense, getExpense, budgets } = useBudgets();
   const expense = getExpense(expenseId);
   const [isBill, setIsBill] = useState(false);
 
   useEffect(() => {
     if (expense) {
-      descriptionRef.current.value = expense.description;
-      amountRef.current.value = expense.amount;
-      budgetIdRef.current.value = expense.budgetId;
       setIsBill(expense.isBill || false);
     }
   }, [expense]);
@@ -30,11 +28,11 @@ export default function EditExpenseModal({ show, handleClose, expenseId }) {
       amount: parseFloat(amountRef.current.value),
       budgetId: expenseBudgetId,
       isBill: isBill,
+      dueDate: isBill ? parseInt(dueDateRef.current.value) : null,
     });
     handleClose();
   }
   
-  // Custom close handler to reset local state
   const handleModalClose = () => {
     setIsBill(false);
     handleClose();
@@ -70,6 +68,22 @@ export default function EditExpenseModal({ show, handleClose, expenseId }) {
               label="Is this a recurring bill?"
             />
           </Form.Group>
+
+          {isBill && (
+            <Form.Group className="mb-3" controlId="dueDate">
+              <Form.Label>Due Date (Day of Month)</Form.Label>
+              {/* MODIFIED: Reverted input to type="number" */}
+              <Form.Control
+                ref={dueDateRef}
+                type="number"
+                required
+                min={1}
+                max={31}
+                defaultValue={expense?.dueDate}
+              />
+            </Form.Group>
+          )}
+
           <Form.Group className="mb-3" controlId="budgetId">
             <Form.Label>Budget</Form.Label>
             <Form.Select ref={budgetIdRef} defaultValue={expense?.budgetId} disabled={isBill}>
