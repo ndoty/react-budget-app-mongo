@@ -1,37 +1,22 @@
-import { Card, Stack } from "react-bootstrap";
+import { Button, Card, Stack } from "react-bootstrap";
 import { currencyFormatter } from "../utils";
 import { useBudgets } from "../contexts/BudgetsContext";
 
-export default function TotalBudgetCard() {
+// MODIFIED: Added onViewIncomeClick prop
+export default function TotalBudgetCard({ onViewIncomeClick }) {
   const { expenses, income, budgets, getBudgetExpenses, UNCATEGORIZED_BUDGET_ID } = useBudgets();
 
-  // 1. Calculate Total Income
-  const totalIncome = income.reduce(
-    (total, item) => total + item.amount, 0
-  );
-
-  // 2. Calculate the "effective spend" for all categorized budgets
+  // --- Calculations (no changes here) ---
+  const totalIncome = income.reduce((total, item) => total + item.amount, 0);
   const totalObligationFromBudgets = budgets.reduce((total, budget) => {
-    const spentInBudget = getBudgetExpenses(budget.id).reduce(
-      (sum, expense) => sum + expense.amount, 0
-    );
-    // For each budget, the amount to account for is the greater of what was spent or what was budgeted
-    const effectiveSpend = Math.max(spentInBudget, budget.max);
-    return total + effectiveSpend;
+    const spentInBudget = getBudgetExpenses(budget.id).reduce((sum, expense) => sum + expense.amount, 0);
+    return total + Math.max(spentInBudget, budget.max);
   }, 0);
-
-  // 3. Calculate spending for the "Uncategorized" budget (this always counts as spent)
-  const uncategorizedSpent = getBudgetExpenses(UNCATEGORIZED_BUDGET_ID).reduce(
-    (total, expense) => total + expense.amount, 0
-  );
-
-  // 4. The final amount to subtract from income
+  const uncategorizedSpent = getBudgetExpenses(UNCATEGORIZED_BUDGET_ID).reduce((total, expense) => total + expense.amount, 0);
   const totalAmountToSubtract = totalObligationFromBudgets + uncategorizedSpent;
-
-  // 5. The final balance
   const balance = totalIncome - totalAmountToSubtract;
 
-  // Determine card style based on the final balance
+  // --- Card Styling (no changes here) ---
   const cardStyle = {};
   if (balance < 0) {
     cardStyle.backgroundColor = 'rgba(255, 0, 0, 0.1)';
@@ -41,9 +26,10 @@ export default function TotalBudgetCard() {
     cardStyle.borderColor = 'rgba(0, 255, 0, 0.2)';
   }
 
-  // Do not render the card if there is no activity at all
+  // --- Render Logic ---
   if (totalIncome === 0 && totalAmountToSubtract === 0) {
-    return null;
+    // Also show the card if there are budgets, so the user can see their plan
+    if (budgets.length === 0) return null;
   }
 
   return (
@@ -56,17 +42,32 @@ export default function TotalBudgetCard() {
           </div>
         </Card.Title>
         <hr />
+        {/* MODIFIED: Updated the breakdown display */}
         <Stack direction="vertical" gap="2" className="mt-2">
             <div className="d-flex justify-content-between">
                 <span>Total Income:</span>
                 <span className="text-success">+{currencyFormatter.format(totalIncome)}</span>
             </div>
             <div className="d-flex justify-content-between">
-                <span>Total Obligations (Spent/Budgeted):</span>
+                <span>Total Budgeted:</span>
+                <span>{currencyFormatter.format(budgets.reduce((total, budget) => total + budget.max, 0))}</span>
+            </div>
+            <div className="d-flex justify-content-between">
+                <span>Total Spent:</span>
                 <span className="text-danger">
-                  - {currencyFormatter.format(totalAmountToSubtract)}
+                  - {currencyFormatter.format(expenses.reduce((total, expense) => total + expense.amount, 0))}
                 </span>
             </div>
+        </Stack>
+        {/* MODIFIED: Added a button to view income details */}
+        <Stack direction="horizontal" gap="2" className="mt-4">
+          <Button
+            variant="outline-success"
+            className="ms-auto"
+            onClick={onViewIncomeClick}
+          >
+            View Income
+          </Button>
         </Stack>
       </Card.Body>
     </Card>
