@@ -1,10 +1,8 @@
-// client/src/components/ViewExpensesModal.js
 import { Modal, Button, Stack } from "react-bootstrap";
 import { UNCATEGORIZED_BUDGET_ID, useBudgets } from "../contexts/BudgetsContext";
 import { currencyFormatter } from "../utils";
 
-// MODIFIED: Added onEditExpenseClick to props
-export default function ViewExpensesModal({ budgetId, handleClose, onEditExpenseClick }) {
+export default function ViewExpensesModal({ budgetId, handleClose, onEditExpenseClick, onMoveExpenseClick }) {
   const { getBudgetExpenses, budgets, deleteBudget, deleteExpense } = useBudgets();
 
   const expenses = getBudgetExpenses(budgetId) || [];
@@ -43,7 +41,12 @@ export default function ViewExpensesModal({ budgetId, handleClose, onEditExpense
               <div className="fs-5">
                 {currencyFormatter.format(expense.amount)}
               </div>
-              {/* MODIFIED: Added Edit button for each expense */}
+              {/* MODIFIED: Conditionally show Move button for Uncategorized expenses */}
+              {budgetId === UNCATEGORIZED_BUDGET_ID && (
+                <Button onClick={() => onMoveExpenseClick(expense.id)} size="sm" variant="outline-success">
+                  Move
+                </Button>
+              )}
               <Button onClick={() => onEditExpenseClick(expense.id)} size="sm" variant="outline-primary">
                 Edit
               </Button>
