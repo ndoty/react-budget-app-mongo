@@ -123,10 +123,10 @@ app.post("/api/expenses", authMiddleware, async (req, res) => {
 app.put("/api/expenses/:id", authMiddleware, async (req, res) => {
   try {
     // MODIFIED: Include isBill in the destructured properties from the request body
-    const { description, amount, budgetId, isBill } = req.body;
+    const { description, amount, budgetId } = req.body;
     const updatedExpense = await Expense.findOneAndUpdate(
       { id: req.params.id, userId: req.userId }, 
-      { description, amount, budgetId, isBill: !!isBill }, // Pass isBill to the update
+      { description, amount, budgetId },
       { new: true }
     );
     if (!updatedExpense) return res.status(404).json({ msg: "Expense not found" });
