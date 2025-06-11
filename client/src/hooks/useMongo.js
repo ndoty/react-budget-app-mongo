@@ -48,17 +48,7 @@ export const deleteItemFromAPI = async (key, itemId, token) => {
   }
 };
 
-export const postMonthlyCapToAPI = async (capData, token) => {
-  const targetUrl = `${API_URL_BASE}/monthlyCap`;
-  const headers = getAuthHeaders(token);
-  try { 
-    const response = await axios.post(targetUrl, capData, { headers }); 
-    return response.data; 
-  } catch (error) { 
-    console.error(`CLIENT: Error posting monthlyCap:`, error.response?.data?.msg || error.message);
-    return null; 
-  }
-};
+// MODIFIED: Removed postMonthlyCapToAPI function
 
 export default function useMongo(key, initialDefault = []) {
   const [value, setValue] = useState(initialDefault);
