@@ -1,12 +1,12 @@
 import { Button, Card, Stack } from "react-bootstrap";
 import { currencyFormatter } from "../utils";
-import { useBudgets, BILLS_BUDGET_ID } from "../contexts/BudgetsContext";
+import { useBudgets } from "../contexts/BudgetsContext";
 
 export default function BillsCard(props) {
-  const { getBudgetExpenses } = useBudgets();
+  const { getBillExpenses } = useBudgets();
   
-  // Get all expenses assigned to the "Bills" category
-  const billsExpenses = getBudgetExpenses(BILLS_BUDGET_ID);
+  // Get all expenses marked as a bill
+  const billsExpenses = getBillExpenses();
   const amount = billsExpenses.reduce(
     (total, expense) => total + expense.amount,
     0
@@ -30,9 +30,9 @@ export default function BillsCard(props) {
           <Button
             variant="outline-secondary"
             className="ms-auto"
-            onClick={props.onViewExpensesClick}
+            onClick={props.onViewBillsClick}
           >
-            View Expenses
+            View Bills
           </Button>
         </Stack>
       </Card.Body>
