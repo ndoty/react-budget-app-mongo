@@ -5,17 +5,17 @@ import { useBudgets } from "../contexts/BudgetsContext";
 export default function EditBudgetModal({ show, handleClose, budgetId }) {
   const nameRef = useRef();
   const maxRef = useRef();
-  const { updateBudget, getBudget } = useBudgets();
+  
+  // MODIFIED: Destructure deleteBudget from useBudgets
+  const { updateBudget, deleteBudget, getBudget } = useBudgets();
   const budget = getBudget(budgetId);
 
-  // Set form values when budget object is available
   useEffect(() => {
     if (budget) {
       nameRef.current.value = budget.name;
       maxRef.current.value = budget.max;
     }
   }, [budget]);
-
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -25,6 +25,14 @@ export default function EditBudgetModal({ show, handleClose, budgetId }) {
       max: parseFloat(maxRef.current.value),
     });
     handleClose();
+  }
+
+  // MODIFIED: Create a handler for the delete action
+  async function handleDelete() {
+    if (budget) {
+      await deleteBudget({ id: budget.id });
+      handleClose();
+    }
   }
 
   return (
@@ -54,6 +62,12 @@ export default function EditBudgetModal({ show, handleClose, budgetId }) {
             </Button>
           </div>
         </Modal.Body>
+        {/* MODIFIED: Added a modal footer for the delete button */}
+        <Modal.Footer>
+          <Button variant="outline-danger" onClick={handleDelete} className="me-auto">
+            Delete Budget
+          </Button>
+        </Modal.Footer>
       </Form>
     </Modal>
   );
