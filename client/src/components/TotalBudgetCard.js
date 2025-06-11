@@ -3,21 +3,16 @@ import { currencyFormatter } from "../utils";
 import { useBudgets } from "../contexts/BudgetsContext";
 
 export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick }) {
-  const { expenses, income, budgets, getBudgetExpenses, getBillExpenses, UNCATEGORIZED_BUDGET_ID } = useBudgets();
+  const { expenses, income, budgets, getBillExpenses } = useBudgets();
 
   // --- Calculations ---
   const totalIncome = (income || []).reduce((total, item) => total + item.amount, 0);
   const totalExpenses = (expenses || []).reduce((total, expense) => total + expense.amount, 0);
   const totalBills = (getBillExpenses() || []).reduce((total, expense) => total + expense.amount, 0);
+  const totalBudgetMax = (budgets || []).reduce((total, budget) => total + budget.max, 0);
   
-  // This calculation seems specific to your logic, leaving it as is.
-  const totalObligationFromBudgets = (budgets || []).reduce((total, budget) => {
-    const spentInBudget = getBudgetExpenses(budget.id).reduce((sum, expense) => sum + expense.amount, 0);
-    return total + Math.max(spentInBudget, budget.max);
-  }, 0);
-  const uncategorizedSpent = getBudgetExpenses(UNCATEGORIZED_BUDGET_ID).reduce((total, expense) => total + expense.amount, 0);
-  const totalAmountToSubtract = totalObligationFromBudgets + uncategorizedSpent;
-  const balance = totalIncome - totalAmountToSubtract;
+  // The Overall Balance is your total income minus your total spending.
+  const balance = totalIncome - totalExpenses;
 
   // --- Card Styling (no changes here) ---
   const cardStyle = {};
@@ -30,8 +25,8 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
   }
 
   // --- Render Logic ---
-  if (totalIncome === 0 && totalAmountToSubtract === 0) {
-    if ((budgets || []).length === 0) return null;
+  if (totalIncome === 0 && totalExpenses === 0 && (budgets || []).length === 0) {
+    return null;
   }
 
   return (
@@ -44,6 +39,7 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
           </div>
         </Card.Title>
         <hr />
+        {/* This breakdown provides the detailed view of your finances */}
         <Stack direction="vertical" gap="2" className="mt-2">
             <div className="d-flex justify-content-between">
                 <span>Total Income:</span>
@@ -51,7 +47,7 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
             </div>
             <div className="d-flex justify-content-between">
                 <span>Total Budgeted:</span>
-                <span>{currencyFormatter.format((budgets || []).reduce((total, budget) => total + budget.max, 0))}</span>
+                <span>{currencyFormatter.format(totalBudgetMax)}</span>
             </div>
             <div className="d-flex justify-content-between">
                 <span>Total Bills:</span>
