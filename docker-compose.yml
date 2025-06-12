@@ -1,52 +1,43 @@
 services:
-  frontend:
-    env_file: ./.env
-    container_name: budget.tns-client
-    build:
-      context: ./client
-      dockerfile: Dockerfile
-    ports:
-      # MODIFIED: The internal container port is now 3000 to match our Nginx config.
-      # The host port is still CLIENT_PORT (3000), so the mapping is now 3000:3000.
-      - ${CLIENT_PORT}:3000
-    networks:
-      Web-Budget-App:
-        aliases:
-          - frontend
-    depends_on:
-      - backend
-    deploy:
-      replicas: 2 # Run 2 instances of your frontend for high availability
-      update_config:
-        parallelism: 1 # Update one container at a time
-        delay: 10s # Wait 10 seconds between updates
-        order: start-first # Start the new container before stopping the old one
+  # Backend Service (Node.js API)
   backend:
-    env_file: ./.env
-    container_name: budget.tns-server
     build:
       context: ./server
       dockerfile: Dockerfile
+    container_name: auth-budgettns-backend
+    restart: unless-stopped
     environment:
-      PORT: ${SERVER_PORT}
-      MONGO_USER: ${MONGO_USER}
-      MONGO_PASS: ${MONGO_PASS}
-    ports:
-      - ${SERVER_PORT}:${SERVER_PORT}
-    networks:
-      Web-Budget-App:
-        aliases:
-          - backend
-    volumes:
-      - ./server:/usr/src/app
-      - /usr/src/app/node_modules
+      - PORT=5000 # Set the internal port for the backend
+      - MONGO_URI=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGO_USER=${MONGO_USER}
+      - MONGO_PASS=${MONGO_PASS}
     deploy:
-      replicas: 2
+      replicas: 1
       update_config:
         parallelism: 1
         delay: 10s
         order: start-first
 
-networks:
-  Web-Budget-App:
-    external: true
+  # Frontend Service (React App served by Nginx)
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=${REACT_APP_API_URL}
+        - REACT_APP_WS_URL=${REACT_APP_WS_URL}
+        - REACT_APP_VERSION=${REACT_APP_VERSION}
+    container_name: auth-budgettns-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      # This maps the host port 3000 to the container port 3000
+      - "3000:3000"
+    deploy:
+      replicas: 2 # Running 2 replicas for high availability
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
