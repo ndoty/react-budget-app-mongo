@@ -1,21 +1,46 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
 
-export default function useLocalStorage(key, defaultValue) {
+const PREFIX = "react-budget-app-mongo-";
+
+export default function useLocalStorage(key, initialValue) {
+  const prefixedKey = PREFIX + key;
+
   const [value, setValue] = useState(() => {
-    const jsonValue = localStorage.getItem(key)
-
-    if (jsonValue != null) return JSON.parse(jsonValue)
-
-    if (typeof defaultValue === "function") {
-      return defaultValue()
-    } else {
-      return defaultValue
+    // Prevent errors during server-side rendering
+    if (typeof window === 'undefined') {
+      return initialValue;
     }
-  })
+    
+    try {
+      const jsonValue = localStorage.getItem(prefixedKey);
+      // If a value exists in localStorage, parse it.
+      // If not, return the initial default value.
+      return jsonValue != null ? JSON.parse(jsonValue) : initialValue;
+    } catch (error) {
+      // If there's an error parsing the stored value (e.g., old data format),
+      // log the error, remove the corrupted item, and fall back to the initial value.
+      console.error(`Error parsing localStorage key "${prefixedKey}":`, error);
+      localStorage.removeItem(prefixedKey);
+      return initialValue;
+    }
+  });
 
   useEffect(() => {
-    localStorage.setItem(key, JSON.stringify(value))
-  }, [key, value])
+    // Prevent errors during server-side rendering
+    if (typeof window !== 'undefined') {
+      try {
+        // When the value is null or undefined, remove it from localStorage
+        // to keep it clean. Otherwise, store the JSON stringified value.
+        if (value === undefined || value === null) {
+          localStorage.removeItem(prefixedKey);
+        } else {
+          localStorage.setItem(prefixedKey, JSON.stringify(value));
+        }
+      } catch (error) {
+        console.error(`Error setting localStorage key "${prefixedKey}":`, error);
+      }
+    }
+  }, [prefixedKey, value]);
 
-  return [value, setValue]
+  return [value, setValue];
 }
