@@ -1,4 +1,3 @@
-// server/index.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -15,22 +14,20 @@ const allowedOrigins = [
   "http://localhost:3000"
 ];
 
+// MODIFIED: Using a more direct CORS configuration.
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error(`Origin ${origin} not allowed by CORS`));
-    }
-  },
+  origin: allowedOrigins, // Pass the array of allowed domains directly
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
   allowedHeaders: "Content-Type, Authorization, X-Requested-With",
   credentials: true,
   optionsSuccessStatus: 204
 };
 
-app.options('*', cors(corsOptions));
+// Use the cors middleware for all routes
 app.use(cors(corsOptions));
+// Explicitly handle preflight requests for all routes
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 
 // --- MongoDB Connection ---
@@ -58,7 +55,6 @@ function broadcastDataUpdate(updateType) {
 wss.on('connection', (ws) => {
   console.log('SERVER WebSocket: Client connected');
   
-  // MODIFIED: Heartbeat logic
   ws.isAlive = true;
   ws.on('pong', () => {
     ws.isAlive = true;
@@ -68,7 +64,6 @@ wss.on('connection', (ws) => {
   ws.on('error', (error) => console.error('SERVER WebSocket: Error:', error));
 });
 
-// MODIFIED: Ping clients every 30 seconds to keep connections alive
 const interval = setInterval(function ping() {
   wss.clients.forEach(function each(ws) {
     if (ws.isAlive === false) return ws.terminate();
