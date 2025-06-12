@@ -1,109 +1,99 @@
-// client/src/contexts/AuthContext.js
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import { Container } from "react-bootstrap";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import axios from "axios";
+import useLocalStorage from "../hooks/useLocalStorage";
 
-const API_URL = process.env.REACT_APP_API_URL || "https://budget-api.technickservices.com/api";
-
-const defaultAuthContextValue = {
-  token: null,
-  currentUser: null,
-  isAuthenticated: false,
-  loading: true,
-  login: async () => ({ success: false, message: 'Auth not ready' }),
-  register: async () => ({ success: false, message: 'Auth not ready' }),
-  logout: () => {},
-};
-
-const AuthContext = createContext(defaultAuthContextValue);
+const AuthContext = createContext();
 
 export function useAuth() {
   return useContext(AuthContext);
 }
 
-export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [internalLoading, setInternalLoading] = useState(true);
+const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget-api.technickservices.com/api";
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUserString = localStorage.getItem('currentUser');
-    if (storedToken) {
-      setToken(storedToken);
-      if (storedUserString) {
-        try {
-          setCurrentUser(JSON.parse(storedUserString));
-        } catch (e) {
-          localStorage.removeItem('currentUser');
-          setCurrentUser(null);
-        }
-      } else {
-        setCurrentUser(null);
-      }
-    } else {
-      setCurrentUser(null);
-    }
-    setInternalLoading(false);
-  }, []);
+export const AuthProvider = ({ children }) => {
+  const [token, setToken] = useLocalStorage("token", null);
+  const [currentUser, setCurrentUser] = useLocalStorage("user", null);
+  const [loading, setLoading] = useState(true);
+
+  const isAuthenticated = token != null;
 
   const login = async (username, password) => {
-    const targetUrl = `${API_URL}/auth/login`;
     try {
-      const res = await axios.post(targetUrl, { username, password });
-      localStorage.setItem('token', res.data.token);
-      const userData = { id: res.data.userId, username: res.data.username };
-      localStorage.setItem('currentUser', JSON.stringify(userData));
-      setToken(res.data.token);
-      setCurrentUser(userData);
-      return { success: true };
+      const response = await axios.post(`${API_URL_BASE}/auth/login`, { username, password });
+      if (response.data.token) {
+        setToken(response.data.token);
+        setCurrentUser({ username });
+        return { success: true };
+      }
+      return { success: false, message: "Login failed. Please try again."};
     } catch (error) {
-      return { success: false, message: error.response?.data?.msg || `Login failed: ${error.message || 'Please try again.'}` };
+      return { success: false, message: error.response?.data?.msg || "Login failed." };
     }
   };
 
   const register = async (username, password) => {
-    const targetUrl = `${API_URL}/auth/register`;
     try {
-      const response = await axios.post(targetUrl, { username, password });
-       if (response.status === 201 || response.status === 200) {
-        return { success: true };
-      } else {
-        return { success: false, message: response.data?.msg || `Registration failed with status ${response.status}` };
+      const response = await axios.post(`${API_URL_BASE}/auth/register`, { username, password });
+      if (response.status === 201) {
+        return { success: true, message: response.data.msg };
       }
+      return { success: false, message: "Registration failed."};
     } catch (error) {
-      let message = 'Registration failed. Please try again.';
-      if (error.response) message = error.response.data.msg || `Server error: ${error.response.status}`;
-      else if (error.request) message = `Network error at ${targetUrl}.`;
-      else message = `Client-side error: ${error.message}`;
-      return { success: false, message };
+      return { success: false, message: error.response?.data?.msg || "Registration failed." };
     }
   };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('currentUser');
+  
+  // MODIFIED: Wrapped logout in useCallback to ensure it has a stable reference
+  const logout = useCallback(() => {
     setToken(null);
     setCurrentUser(null);
-  };
+    // This will effectively log the user out and redirect them via the ProtectedRoute component
+  }, [setToken, setCurrentUser]);
 
-  const contextValue = {
+  useEffect(() => {
+    setLoading(false);
+  }, []);
+
+  // MODIFIED: Added a useEffect to handle expired tokens globally
+  useEffect(() => {
+    // This is an Axios interceptor. It runs a function on every API response.
+    const responseInterceptor = axios.interceptors.response.use(
+      // If the response is successful (e.g., status 200), just pass it through.
+      response => response,
+      // If the response has an error...
+      error => {
+        // Check if the error is an authentication error (401 Unauthorized or 403 Forbidden)
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+          console.error("Authentication error detected. Logging out.");
+          // If the token is expired or invalid, call the logout function.
+          logout();
+        }
+        // Be sure to return the error, so other parts of the app can handle it if needed.
+        return Promise.reject(error);
+      }
+    );
+
+    // This is a cleanup function that runs when the component unmounts.
+    // It removes the interceptor to prevent memory leaks.
+    return () => {
+      axios.interceptors.response.eject(responseInterceptor);
+    };
+  }, [logout]);
+
+
+  const value = {
     token,
     currentUser,
-    isAuthenticated: !!token,
-    loading: internalLoading,
+    isAuthenticated,
+    loading,
     login,
     register,
     logout,
   };
 
-  if (internalLoading) {
-    return <Container className="my-4" style={{ textAlign: 'center' }}><p>Initializing Authentication...</p></Container>;
-  }
-
   return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
