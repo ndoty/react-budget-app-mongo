@@ -15,6 +15,12 @@ services:
           - frontend
     depends_on:
       - backend
+    deploy:
+      replicas: 2 # Run 2 instances of your frontend for high availability
+      update_config:
+        parallelism: 1 # Update one container at a time
+        delay: 10s # Wait 10 seconds between updates
+        order: start-first # Start the new container before stopping the old one
   backend:
     env_file: ./.env
     container_name: budget.tns-server
@@ -34,6 +40,12 @@ services:
     volumes:
       - ./server:/usr/src/app
       - /usr/src/app/node_modules
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
 
 networks:
   Web-Budget-App:
