@@ -1,30 +1,67 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Ignore .env
-.env
+# Dependencies
+# ----------------------------------------------------------------
+# Node package dependencies
+node_modules/
+/client/node_modules
+/server/node_modules
 
-# Ignore client build
-client/build
-
-# dependencies
-server/node_modules
-client/node_modules
-*/.pnp
+# Yarn PnP
+.pnp
 .pnp.js
 
-# testing
+# Production builds
+# ----------------------------------------------------------------
+# React build output
+/client/build
+
+# Testing
+# ----------------------------------------------------------------
+# Test coverage reports
 /coverage
+/jest-coverage
 
-# production
-/build
+# Environment Variables
+# ----------------------------------------------------------------
+# Ignore all .env files to keep secrets out of the repository
+# IMPORTANT: Be sure to commit a .env.example file with placeholder values
+.env*
+!.env.example
 
-# misc
-.DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
+# Logs
+# ----------------------------------------------------------------
+# Log files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
+
+# Operating System Files
+# ----------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+
+# IDE and Editor Directories
+# ----------------------------------------------------------------
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# JetBrains (WebStorm, IntelliJ)
+.idea/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
