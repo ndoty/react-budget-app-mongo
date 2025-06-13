@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container } from 'react-bootstrap';
 
-const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget-api.technickservices.com/api";
+// MODIFIED: Updated the fallback URL to use the correct single domain.
+const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget.technickservices.com/api";
 
 const VersionFooter = () => {
     const [backendVersion, setBackendVersion] = useState('loading...');
