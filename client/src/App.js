@@ -16,6 +16,7 @@ import MoveExpenseModal from "./components/MoveExpenseModal";
 import BudgetCard from "./components/BudgetCard";
 import UncategorizedBudgetCard from "./components/UncategorizedBudgetCard";
 import TotalBudgetCard from "./components/TotalBudgetCard";
+import VersionFooter from "./components/VersionFooter"; // Import the new component
 
 // Contexts & Hooks
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
@@ -160,12 +161,11 @@ function BudgetAppContent() {
           </Navbar.Collapse>
         </Container>
       </Navbar>
-      <Container className="my-4">
+      <Container className="my-4" style={{ flex: '1' }}>
         <Stack direction="horizontal" gap="2" className="mb-4">
           <h1 className="me-auto" style={{visibility: 'hidden'}}>Budgets</h1>
           <Button variant="primary" onClick={() => setShowAddBudgetModal(true)}>Add Budget</Button>
           <Button variant="success" onClick={() => setShowAddIncomeModal(true)}>Add Income</Button>
-          {/* MODIFIED: Updated button text */}
           <Button variant="outline-primary" onClick={() => openAddExpenseModal()}>Add Expense / Bill</Button>
         </Stack>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
@@ -247,13 +247,17 @@ function BudgetAppContent() {
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
+
   if (loading) {
     return <Container className="my-4" style={{textAlign: 'center'}}><p>Authenticating...</p></Container>;
   }
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  return children;
+
+  // MODIFIED: This wrapper div ensures the footer is pushed to the bottom
+  return <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>{children}<VersionFooter /></div>;
 }
 
 function App() {
