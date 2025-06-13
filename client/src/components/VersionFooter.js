@@ -1,60 +1,37 @@
-# --- Upstream server definitions ---
-upstream backend_api {
-  # The backend service name and port as defined in docker-compose.yml
-  server backend:5000;
-}
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Container } from 'react-bootstrap';
 
-upstream backend_ws {
-  # The backend service for WebSocket connections
-  server backend:5000;
-}
+const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget-api.technickservices.com/api";
 
-server {
-  # Nginx will listen on port 3000 inside the container
-  listen 3000;
+const VersionFooter = () => {
+    const [backendVersion, setBackendVersion] = useState('loading...');
+    const frontendVersion = process.env.REACT_APP_VERSION || 'N/A';
 
-  # --- API Reverse Proxy ---
-  location /api/ {
-    # This block handles the OPTIONS preflight requests sent by browsers.
-    if ($request_method = 'OPTIONS') {
-       # Use 'always' to ensure headers are added, even for some error responses.
-       add_header 'Access-Control-Allow-Origin' 'https://budget.technickservices.com' always;
-       add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, PATCH, OPTIONS' always;
-       add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, X-Requested-With' always;
-       add_header 'Access-Control-Allow-Credentials' 'true' always;
-       add_header 'Access-Control-Max-Age' 86400 always;
-       # Return a 204 No Content for successful preflight checks, which is the standard.
-       return 204;
-    }
+    useEffect(() => {
+        const fetchBackendVersion = async () => {
+            try {
+                // Fetches the version from the /api/version endpoint on the server
+                const response = await axios.get(`${API_URL_BASE}/version`);
+                setBackendVersion(response.data.version || 'unknown');
+            } catch (error) {
+                console.error("Failed to fetch backend version:", error);
+                setBackendVersion('error');
+            }
+        };
 
-    # For actual API requests (GET, POST, etc.), these headers ensure that even
-    # if the backend also adds them, the browser gets a valid response.
-    add_header 'Access-Control-Allow-Origin' 'https://budget.technickservices.com' always;
-    add_header 'Access-Control-Allow-Credentials' 'true' always;
+        fetchBackendVersion();
+    }, []);
 
-    # Pass the request to the upstream backend service.
-    proxy_pass http://backend_api;
-    proxy_redirect off;
+    return (
+        <footer className="bg-light text-center text-muted py-2 mt-auto">
+            <Container>
+                <small>
+                    Client Version: {frontendVersion} | Server Version: {backendVersion}
+                </small>
+            </Container>
+        </footer>
+    );
+};
 
-    # Pass essential headers to the backend application.
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
-
-  # --- WebSocket Reverse Proxy ---
-  location /ws {
-    proxy_pass http://backend_ws;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_set_header Host $host;
-  }
-
-  # --- Static File Serving ---
-  location / {
-    root /usr/share/nginx/html;
-    try_files $uri /index.html;
-  }
-}
+export default VersionFooter;
