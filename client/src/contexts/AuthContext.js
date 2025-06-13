@@ -8,7 +8,8 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget-api.technickservices.com/api";
+// MODIFIED: Updated the API URL to use the single, correct domain
+const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget.technickservices.com/api";
 
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useLocalStorage("token", null);
@@ -43,38 +44,27 @@ export const AuthProvider = ({ children }) => {
     }
   };
   
-  // MODIFIED: Wrapped logout in useCallback to ensure it has a stable reference
   const logout = useCallback(() => {
     setToken(null);
     setCurrentUser(null);
-    // This will effectively log the user out and redirect them via the ProtectedRoute component
   }, [setToken, setCurrentUser]);
 
   useEffect(() => {
     setLoading(false);
   }, []);
 
-  // MODIFIED: Added a useEffect to handle expired tokens globally
   useEffect(() => {
-    // This is an Axios interceptor. It runs a function on every API response.
     const responseInterceptor = axios.interceptors.response.use(
-      // If the response is successful (e.g., status 200), just pass it through.
       response => response,
-      // If the response has an error...
       error => {
-        // Check if the error is an authentication error (401 Unauthorized or 403 Forbidden)
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
           console.error("Authentication error detected. Logging out.");
-          // If the token is expired or invalid, call the logout function.
           logout();
         }
-        // Be sure to return the error, so other parts of the app can handle it if needed.
         return Promise.reject(error);
       }
     );
 
-    // This is a cleanup function that runs when the component unmounts.
-    // It removes the interceptor to prevent memory leaks.
     return () => {
       axios.interceptors.response.eject(responseInterceptor);
     };
