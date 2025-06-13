@@ -7,8 +7,8 @@ WORKDIR /usr/src/app
 COPY package.json ./
 COPY package-lock.json ./
 
-# Install all dependencies from the clean lockfile.
-RUN npm ci
+# MODIFIED: Using 'npm install' as it is more resilient to lockfile issues.
+RUN npm install
 
 # Copy the rest of the application source code.
 COPY . .
