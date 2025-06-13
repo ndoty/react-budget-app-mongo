@@ -1,3 +1,4 @@
+# This simplified file is for a single-node deployment and connects to an external MongoDB.
 services:
   backend:
     build: ./server
