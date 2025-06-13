@@ -1,53 +1,37 @@
+# This simplified file is for a single-node deployment.
 services:
-  registry:
-    image: registry:2
-    ports:
-      - "5000:5000"
-    deploy:
-      placement:
-        constraints: [node.role == manager]
-
   backend:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    image: 127.0.0.1:5000/tns-budget-backend
+    build: ./server
+    image: tns-budget-backend:latest # Build and tag the image
+    restart: unless-stopped
     ports:
-      - "5001:5000"
+      - "5001:5000" # Expose backend on port 5001
     environment:
       - PORT=5000
       - MONGO_URI=${MONGO_URI}
-      # MODIFIED: Removed JWT_SECRET from environment
     secrets:
       - mongo_user
       - mongo_pass
-      - jwt_secret # MODIFIED: Added JWT secret
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
+      - jwt_secret
 
   frontend:
     build:
       context: ./client
-      dockerfile: Dockerfile
       args:
         - REACT_APP_API_URL=${REACT_APP_API_URL}
         - REACT_APP_WS_URL=${REACT_APP_WS_URL}
         - REACT_APP_VERSION=${REACT_APP_VERSION}
-    image: 127.0.0.1:5000/tns-budget-frontend
+    image: tns-budget-frontend:latest # Build and tag the image
+    restart: unless-stopped
     ports:
-      - "3000:3000"
-    deploy:
-      replicas: 2
-      restart_policy:
-        condition: on-failure
+      - "3000:3000" # Expose frontend on port 3000
+    depends_on:
+      - backend
 
 secrets:
   mongo_user:
     file: ./mongo_user.txt
   mongo_pass:
     file: ./mongo_pass.txt
-  # MODIFIED: Added a top-level definition for the JWT secret
   jwt_secret:
     file: ./jwt_secret.txt
