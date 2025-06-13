@@ -29,7 +29,11 @@ if (!mongoConnectionString) {
 
 mongoose.connect(mongoConnectionString)
   .then(() => console.log('SERVER LOG: MongoDB Connected Successfully!'))
-  .catch(err => console.error('SERVER ERROR: MongoDB Connection Failed! Details:', err.message));
+  .catch(err => {
+    console.error('SERVER ERROR: MongoDB Connection Failed! Details:', err.message);
+    // Exit if cannot connect to the database, which causes the 500 errors.
+    process.exit(1);
+  });
 
 // WebSocket Server Setup
 const server = http.createServer(app);
@@ -38,11 +42,15 @@ const wss = new WebSocket.Server({ server, path: "/ws" });
 
 // --- ROUTES ---
 const authRoutes = require('./routes/auth');
-const authMiddleware = require('./middleware/authMiddleware');
-// ... (Your other require statements and routes remain the same) ...
+// ... (Your other route require statements) ...
 
 app.use('/api/auth', authRoutes);
-// ... (Your other app.use calls remain the same) ...
+// ... (Your other app.use calls) ...
+// Ensure you have the version endpoint
+app.get('/api/version', (req, res) => {
+  res.status(200).json({ version: version });
+});
+
 
 server.listen(PORT, () => {
   console.log(`SERVER LOG: Backend with WebSocket support is running on port ${PORT}`);
