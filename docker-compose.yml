@@ -15,14 +15,13 @@ services:
     ports:
       - "5001:5000"
     environment:
-      # MODIFIED: Removed user/pass from environment. They are now secrets.
       - PORT=5000
-      - MONGO_URI=${MONGO_URI} 
-      - JWT_SECRET=${JWT_SECRET}
-    # MODIFIED: Added secrets configuration
+      - MONGO_URI=${MONGO_URI}
+      # MODIFIED: Removed JWT_SECRET from environment
     secrets:
       - mongo_user
       - mongo_pass
+      - jwt_secret # MODIFIED: Added JWT secret
     deploy:
       replicas: 1
       restart_policy:
@@ -44,9 +43,11 @@ services:
       restart_policy:
         condition: on-failure
 
-# MODIFIED: Added a top-level secrets definition
 secrets:
   mongo_user:
     file: ./mongo_user.txt
   mongo_pass:
     file: ./mongo_pass.txt
+  # MODIFIED: Added a top-level definition for the JWT secret
+  jwt_secret:
+    file: ./jwt_secret.txt
