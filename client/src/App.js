@@ -16,13 +16,13 @@ import MoveExpenseModal from "./components/MoveExpenseModal";
 import BudgetCard from "./components/BudgetCard";
 import UncategorizedBudgetCard from "./components/UncategorizedBudgetCard";
 import TotalBudgetCard from "./components/TotalBudgetCard";
-import VersionFooter from "./components/VersionFooter"; // Import the new component
+import VersionFooter from "./components/VersionFooter";
 
 // Contexts & Hooks
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 
-// --- Authentication Pages (no changes) ---
+// --- Authentication Pages ---
 function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ function LoginPage() {
   };
 
   return (
-    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: "100vh" }}>
+    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: "80vh" }}>
       <div className="w-100" style={{ maxWidth: "400px" }}>
         <h2 className="text-center mb-4">Log In</h2>
         {error && <div className="alert alert-danger">{error}</div>}
@@ -91,7 +91,7 @@ function RegisterPage() {
   };
 
   return (
-    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: "100vh" }}>
+    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: "80vh" }}>
       <div className="w-100" style={{ maxWidth: "400px" }}>
         <h2 className="text-center mb-4">Register</h2>
         {error && <div className="alert alert-danger">{error}</div>}
@@ -161,7 +161,7 @@ function BudgetAppContent() {
           </Navbar.Collapse>
         </Container>
       </Navbar>
-      <Container className="my-4" style={{ flex: '1' }}>
+      <Container className="my-4">
         <Stack direction="horizontal" gap="2" className="mb-4">
           <h1 className="me-auto" style={{visibility: 'hidden'}}>Budgets</h1>
           <Button variant="primary" onClick={() => setShowAddBudgetModal(true)}>Add Budget</Button>
@@ -245,6 +245,7 @@ function BudgetAppContent() {
   );
 }
 
+// MODIFIED: ProtectedRoute no longer handles layout
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
 
@@ -256,8 +257,7 @@ function ProtectedRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  // MODIFIED: This wrapper div ensures the footer is pushed to the bottom
-  return <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>{children}<VersionFooter /></div>;
+  return children;
 }
 
 function App() {
@@ -265,12 +265,23 @@ function App() {
     <Router>
       <AuthProvider>
         <BudgetsProvider>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/" element={ <ProtectedRoute> <BudgetAppContent /> </ProtectedRoute> } />
-            <Route path="*" element={ <Navigate to="/login" replace />} />
-          </Routes>
+          {/* MODIFIED: Added a global layout wrapper */}
+          <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+            <main style={{ flex: '1 0 auto' }}>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <BudgetAppContent />
+                  </ProtectedRoute>
+                } />
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </main>
+            {/* The VersionFooter is now outside the Routes, so it appears on every page */}
+            <VersionFooter />
+          </div>
         </BudgetsProvider>
       </AuthProvider>
     </Router>
