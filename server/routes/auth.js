@@ -13,7 +13,7 @@ if (!JWT_SECRET) {
 
 // Register Route
 router.post('/register', async (req, res) => {
-    // ... (Your registration logic remains the same) ...
+    // Your registration logic...
 });
 
 // Login Route
