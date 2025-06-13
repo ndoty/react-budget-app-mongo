@@ -12,15 +12,17 @@ services:
       context: ./server
       dockerfile: Dockerfile
     image: 127.0.0.1:5000/tns-budget-backend
-    # MODIFIED: Added a ports section to expose the backend on port 5001
     ports:
       - "5001:5000"
     environment:
+      # MODIFIED: Removed user/pass from environment. They are now secrets.
       - PORT=5000
-      - MONGO_URI=${MONGO_URI}
+      - MONGO_URI=${MONGO_URI} 
       - JWT_SECRET=${JWT_SECRET}
-      - MONGO_USER=${MONGO_USER}
-      - MONGO_PASS=${MONGO_PASS}
+    # MODIFIED: Added secrets configuration
+    secrets:
+      - mongo_user
+      - mongo_pass
     deploy:
       replicas: 1
       restart_policy:
@@ -30,6 +32,10 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=${REACT_APP_API_URL}
+        - REACT_APP_WS_URL=${REACT_APP_WS_URL}
+        - REACT_APP_VERSION=${REACT_APP_VERSION}
     image: 127.0.0.1:5000/tns-budget-frontend
     ports:
       - "3000:3000"
@@ -37,3 +43,10 @@ services:
       replicas: 2
       restart_policy:
         condition: on-failure
+
+# MODIFIED: Added a top-level secrets definition
+secrets:
+  mongo_user:
+    file: ./mongo_user.txt
+  mongo_pass:
+    file: ./mongo_pass.txt
