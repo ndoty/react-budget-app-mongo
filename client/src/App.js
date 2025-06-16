@@ -18,6 +18,7 @@ import UncategorizedBudgetCard from "./components/UncategorizedBudgetCard";
 import TotalBudgetCard from "./components/TotalBudgetCard";
 import VersionFooter from "./components/VersionFooter";
 import ChangePasswordModal from "./components/ChangePasswordModal";
+import ImportDataModal from "./components/ImportDataModal";
 
 // Contexts & Hooks
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
@@ -134,8 +135,9 @@ function BudgetAppContent() {
   const [editBudgetModalId, setEditBudgetModalId] = useState();
   const [moveExpenseModalId, setMoveExpenseModalId] = useState();
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showImportDataModal, setShowImportDataModal] = useState(false);
 
-  const { budgets, getBudgetExpenses } = useBudgets();
+  const { budgets, getBudgetExpenses, exportData } = useBudgets();
   const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
 
@@ -162,6 +164,9 @@ function BudgetAppContent() {
                   <NavDropdown.Item onClick={() => setShowChangePasswordModal(true)}>
                     Change Password
                   </NavDropdown.Item>
+                  <NavDropdown.Divider />
+                  <NavDropdown.Item onClick={exportData}>Export Data</NavDropdown.Item>
+                  <NavDropdown.Item onClick={() => setShowImportDataModal(true)}>Import Data</NavDropdown.Item>
                   <NavDropdown.Divider />
                   <NavDropdown.Item onClick={handleLogout}>
                     Logout
@@ -253,6 +258,7 @@ function BudgetAppContent() {
         expenseId={moveExpenseModalId}
       />
       <ChangePasswordModal show={showChangePasswordModal} handleClose={() => setShowChangePasswordModal(false)} />
+      <ImportDataModal show={showImportDataModal} handleClose={() => setShowImportDataModal(false)} />
     </>
   );
 }
