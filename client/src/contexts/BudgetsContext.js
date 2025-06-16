@@ -55,8 +55,8 @@ export const BudgetsProvider = ({ children }) => {
     let reconnectTimeout;
 
     function connect() {
-      // Use the correct WebSocket URL that was previously working
-      const WS_URL = process.env.REACT_APP_WS_URL || "wss://budget.technickservices.com/ws";
+      // MODIFIED: Restored the correct WebSocket URL that uses the /api/ws path
+      const WS_URL = "wss://budget.technickservices.com/api/ws";
       ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
@@ -75,6 +75,8 @@ export const BudgetsProvider = ({ children }) => {
           switch (message.type) {
             case 'BUDGET_DATA_UPDATED':
               refetchData('budgets', setBudgets);
+              refetchData('expenses', setExpenses); // Also refetch expenses if budgets change
+              refetchData('income', setIncome);
               break;
             case 'EXPENSE_DATA_UPDATED':
               refetchData('expenses', setExpenses);
@@ -113,7 +115,7 @@ export const BudgetsProvider = ({ children }) => {
         ws.close();
       }
     };
-  }, [isAuthenticated, token, setBudgets, setExpenses, setIncome]);
+  }, [isAuthenticated, token]);
 
 
   function getBudgetExpenses(budgetId) {
@@ -143,19 +145,13 @@ export const BudgetsProvider = ({ children }) => {
   async function addExpense({ description, amount, budgetId, isBill, dueDate }) {
     if (!isAuthenticated || !token) return;
     const newExpense = { id: uuidV4(), description, amount, budgetId, isBill, dueDate };
-    const savedExpense = await postSingleItemToAPI("expenses", newExpense, token);
-    if (savedExpense) {
-      setExpenses(prev => [...prev, savedExpense]);
-    }
+    await postSingleItemToAPI("expenses", newExpense, token);
   }
   
   async function addIncome({ description, amount }) {
     if (!isAuthenticated || !token) return;
     const newIncome = { id: uuidV4(), description, amount };
-    const savedIncome = await postSingleItemToAPI("income", newIncome, token);
-    if (savedIncome) {
-      setIncome(prev => [...prev, savedIncome]);
-    }
+    await postSingleItemToAPI("income", newIncome, token);
   }
 
   async function addBudget({ name, max }) {
@@ -165,61 +161,37 @@ export const BudgetsProvider = ({ children }) => {
       return;
     }
     const newBudget = { id: uuidV4(), name, max };
-    const savedBudget = await postSingleItemToAPI("budgets", newBudget, token);
-    if (savedBudget) {
-      setBudgets(prev => [...prev, savedBudget]);
-    }
+    await postSingleItemToAPI("budgets", newBudget, token);
   }
 
   async function deleteBudget({ id }) {
     if (!isAuthenticated || !token) return;
-    const result = await deleteItemFromAPI("budgets", id, token);
-    if (result) {
-      const updatedExpenses = await fetchDataFromAPI("expenses", token);
-      if (updatedExpenses) setExpenses(updatedExpenses);
-      setBudgets(prev => prev.filter(b => b.id !== id));
-    }
+    await deleteItemFromAPI("budgets", id, token);
   }
     
   async function deleteIncome({ id }) {
     if (!isAuthenticated || !token) return;
-    const result = await deleteItemFromAPI("income", id, token);
-    if (result) {
-      setIncome(prev => prev.filter(i => i.id !== id));
-    }
+    await deleteItemFromAPI("income", id, token);
   }
 
   async function deleteExpense({ id }) {
     if (!isAuthenticated || !token) return;
-    const result = await deleteItemFromAPI("expenses", id, token);
-    if (result) {
-      setExpenses(prev => prev.filter(e => e.id !== id));
-    }
+    await deleteItemFromAPI("expenses", id, token);
   }
   
   async function updateBudget({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    const updatedBudget = await updateItemInAPI("budgets", id, updates, token);
-    if (updatedBudget) {
-      setBudgets(prev => prev.map(b => b.id === id ? updatedBudget : b));
-    }
+    await updateItemInAPI("budgets", id, updates, token);
   }
   
   async function updateExpense({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    const updatedExpense = await updateItemInAPI("expenses", id, updates, token);
-    if (updatedExpense) {
-      // Corrected the typo from 'b' to 'e'
-      setExpenses(prev => prev.map(e => e.id === id ? updatedExpense : e));
-    }
+    await updateItemInAPI("expenses", id, updates, token);
   }
   
   async function updateIncome({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    const updatedIncome = await updateItemInAPI("income", id, updates, token);
-    if (updatedIncome) {
-      setIncome(prev => prev.map(i => i.id === id ? updatedIncome : i));
-    }
+    await updateItemInAPI("income", id, updates, token);
   }
 
   const exportData = async () => {
@@ -252,12 +224,8 @@ export const BudgetsProvider = ({ children }) => {
         const headers = { Authorization: `Bearer ${token}` };
         await axios.post(`${API_URL_BASE}/data/import`, data, { headers });
         
-        const budgetsData = await fetchDataFromAPI("budgets", token);
-        const expensesData = await fetchDataFromAPI("expenses", token);
-        const incomeData = await fetchDataFromAPI("income", token);
-        setBudgets(budgetsData || []);
-        setExpenses(expensesData || []);
-        setIncome(incomeData || []);
+        // After import, force a refetch of all data to update the UI for all clients
+        broadcastDataUpdate('BUDGET_DATA_UPDATED');
     } catch (error) {
         console.error("Failed to import data:", error);
         throw new Error(error.response?.data?.msg || "Import failed on the server.");
