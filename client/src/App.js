@@ -124,7 +124,8 @@ function RegisterPage() {
 }
 
 // --- Main application component for budgets ---
-function BudgetAppContent({ openAddExpenseModal, setShowAddBudgetModal, setShowAddIncomeModal, setViewExpensesModalBudgetId, setEditBudgetModalId }) {
+// MODIFIED: This component now accepts the click handlers as props
+function BudgetAppContent({ openAddExpenseModal, setShowAddBudgetModal, setShowAddIncomeModal, setViewExpensesModalBudgetId, setEditBudgetModalId, onViewIncomeClick, onViewBillsClick }) {
   const { budgets, getBudgetExpenses } = useBudgets();
   
   return (
@@ -136,7 +137,8 @@ function BudgetAppContent({ openAddExpenseModal, setShowAddBudgetModal, setShowA
         <Button variant="outline-primary" onClick={() => openAddExpenseModal()}>Add Expense / Bill</Button>
       </Stack>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
-        <TotalBudgetCard />
+        {/* MODIFIED: The handlers are passed to the TotalBudgetCard */}
+        <TotalBudgetCard onViewIncomeClick={onViewIncomeClick} onViewBillsClick={onViewBillsClick} />
         { Array.isArray(budgets) && budgets.map((budget) => {
           const amount = getBudgetExpenses(budget.id).reduce((total, expense) => total + expense.amount, 0);
           return (
@@ -243,12 +245,15 @@ function AppLayout() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/" element={
             <ProtectedRoute>
+              {/* MODIFIED: The handlers are now passed down to the content component */}
               <BudgetAppContent 
                 openAddExpenseModal={openAddExpenseModal}
                 setShowAddBudgetModal={setShowAddBudgetModal}
                 setShowAddIncomeModal={setShowAddIncomeModal}
                 setViewExpensesModalBudgetId={setViewExpensesModalBudgetId}
                 setEditBudgetModalId={setEditBudgetModalId}
+                onViewIncomeClick={() => setShowViewIncomeModal(true)}
+                onViewBillsClick={() => setShowViewBillsModal(true)}
               />
             </ProtectedRoute>
           } />
