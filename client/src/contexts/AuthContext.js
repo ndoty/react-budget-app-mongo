@@ -22,7 +22,6 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.post(`${API_URL_BASE}/auth/login`, { username, password });
       if (response.data.token) {
         setToken(response.data.token);
-        // The username is now returned from the login endpoint
         setCurrentUser(response.data.user);
         return { success: true };
       }
@@ -49,7 +48,6 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser(null);
   }, [setToken, setCurrentUser]);
 
-  // Function to change password
   const changePassword = async (currentPassword, newPassword) => {
       try {
           const headers = { Authorization: `Bearer ${token}` };
@@ -60,6 +58,22 @@ export const AuthProvider = ({ children }) => {
           return { success: true, message: response.data.msg };
       } catch (error) {
           return { success: false, message: error.response?.data?.msg || "Password update failed." };
+      }
+  };
+
+  // Function to delete the user's account
+  const deleteAccount = async (password) => {
+      try {
+          const headers = { Authorization: `Bearer ${token}` };
+          const response = await axios.post(`${API_URL_BASE}/auth/delete-account`,
+              { password },
+              { headers }
+          );
+          // On successful deletion, log the user out
+          logout();
+          return { success: true, message: response.data.msg };
+      } catch (error) {
+          return { success: false, message: error.response?.data?.msg || "Account deletion failed." };
       }
   };
 
@@ -92,7 +106,8 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    changePassword, // Expose the new function
+    changePassword,
+    deleteAccount, // Expose the new function
   };
 
   return (
