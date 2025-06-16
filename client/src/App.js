@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
-import { Button, Stack, Container, Nav, Navbar, Form, NavDropdown, Image } from "react-bootstrap"; // Import Image
+import { Button, Stack, Container, Nav, Navbar, Form, NavDropdown, Image } from "react-bootstrap";
 
 // Components
 import AddBudgetModal from "./components/AddBudgetModal";
@@ -20,6 +20,7 @@ import VersionFooter from "./components/VersionFooter";
 import ChangePasswordModal from "./components/ChangePasswordModal";
 import ImportDataModal from "./components/ImportDataModal";
 import DeleteAccountModal from "./components/DeleteAccountModal";
+import Logo from './components/Logo'; // Import the new Logo component
 
 // Contexts & Hooks
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
@@ -157,9 +158,8 @@ function BudgetAppContent() {
     <>
       <Navbar bg="light" expand="lg" className="mb-4">
         <Container>
-          {/* MODIFIED: Removed text and increased logo size */}
           <Navbar.Brand as={Link} to="/">
-            <Image src="/logo.png" width="150" height="150" className="d-inline-block align-top" alt="TechNick Services Budget App Logo" />
+            <Logo />
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav" className="justify-content-end">
