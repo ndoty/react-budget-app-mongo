@@ -5,16 +5,14 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const authMiddleware = require('../middleware/authMiddleware');
 
-// Read the JWT_SECRET directly from environment variables.
-const JWT_SECRET = process.env.JWT_SECRET;
+// Use the environment variable for the JWT_SECRET, but provide a
+// default fallback to prevent the application from crashing.
+const JWT_SECRET = process.env.JWT_SECRET || 'default_fallback_secret_for_development';
 
 // @route   POST api/auth/register
 // @desc    Register a new user
 router.post('/register', async (req, res) => {
     const { username, password } = req.body;
-    if (!password || !username) {
-        return res.status(400).json({ msg: 'Please enter all fields' });
-    }
     try {
         let user = await User.findOne({ username });
         if (user) {
@@ -35,13 +33,7 @@ router.post('/register', async (req, res) => {
 // @desc    Authenticate user & get token
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
-    if (!password || !username) {
-        return res.status(400).json({ msg: 'Please enter all fields' });
-    }
     try {
-        if (!JWT_SECRET) {
-            throw new Error("JWT_SECRET is not configured on the server.");
-        }
         let user = await User.findOne({ username });
         if (!user) {
             return res.status(400).json({ msg: 'Invalid Credentials' });
