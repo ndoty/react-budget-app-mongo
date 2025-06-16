@@ -35,6 +35,7 @@ export const BudgetsProvider = ({ children }) => {
   const [expenses, setExpenses] = useMongo("expenses", EMPTY_ARRAY);
   const [income, setIncome] = useMongo("income", EMPTY_ARRAY);
 
+  // Use the real logout function from AuthContext
   const logout = authLogout;
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export const BudgetsProvider = ({ children }) => {
     let reconnectTimeout;
 
     function connect() {
+      // Use the correct WebSocket URL that was previously working
       const WS_URL = process.env.REACT_APP_WS_URL || "wss://budget.technickservices.com/ws";
       ws = new WebSocket(WS_URL);
 
@@ -207,7 +209,8 @@ export const BudgetsProvider = ({ children }) => {
     if (!isAuthenticated || !token) return;
     const updatedExpense = await updateItemInAPI("expenses", id, updates, token);
     if (updatedExpense) {
-      setExpenses(prev => prev.map(e => e.id === id ? updatedExpense : b));
+      // Corrected the typo from 'b' to 'e'
+      setExpenses(prev => prev.map(e => e.id === id ? updatedExpense : e));
     }
   }
   
