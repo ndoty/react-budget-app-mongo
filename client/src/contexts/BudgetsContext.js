@@ -52,7 +52,7 @@ export const BudgetsProvider = ({ children }) => {
     let reconnectTimeout;
 
     function connect() {
-      // MODIFIED: This now points to the correct /api/ws path.
+      // MODIFIED: This must point to the /api/ws path to work.
       const WS_URL = "wss://budget.technickservices.com/api/ws";
       console.log(`CLIENT LOG: Attempting to connect to WebSocket at ${WS_URL}`);
       ws = new WebSocket(WS_URL);
