@@ -36,7 +36,6 @@ mongoose.connect(mongoConnectionString)
 
 // --- WebSocket Server Setup ---
 const server = http.createServer(app);
-// MODIFIED: Reverted to using the robust 'noServer' setup
 const wss = new WebSocket.Server({ noServer: true });
 
 function broadcastDataUpdate(updateType) {
@@ -57,10 +56,8 @@ wss.on('connection', (ws, req) => {
   ws.on('error', (error) => console.error('SERVER LOG: WebSocket error:', error));
 });
 
-// MODIFIED: Restored the manual server upgrade handler
 server.on('upgrade', (request, socket, head) => {
     // This path must match what the client is trying to connect to.
-    // Based on our last working configuration, this should be '/ws'
     if (request.url === '/ws') {
         wss.handleUpgrade(request, socket, head, (ws) => {
             wss.emit('connection', ws, request);
@@ -83,6 +80,7 @@ const interval = setInterval(function ping() {
 const authRoutes = require('./routes/auth');
 const dataRoutes = require('./routes/data');
 const authMiddleware = require('./middleware/authMiddleware');
+// MODIFIED: Restored the missing model require statements
 const Budget = require("./models/Budget");
 const Expense = require("./models/Expense");
 const Income = require('./models/Income');
@@ -111,5 +109,4 @@ app.put("/api/income/:id", authMiddleware, async (req, res) => { try { const { d
 
 
 server.listen(PORT, () => {
-  console.log(`SERVER LOG: Backend with WebSocket support is running on port ${PORT}`);
-});
+  console.log(`SERVER LOG: Backend with WebSocket support is running on port
