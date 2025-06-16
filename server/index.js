@@ -36,7 +36,8 @@ mongoose.connect(mongoConnectionString)
 
 // --- WebSocket Server Setup ---
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server, path: "/ws" });
+// MODIFIED: Reverted to using the robust 'noServer' setup
+const wss = new WebSocket.Server({ noServer: true });
 
 function broadcastDataUpdate(updateType) {
   const message = JSON.stringify({ type: updateType });
@@ -56,6 +57,20 @@ wss.on('connection', (ws, req) => {
   ws.on('error', (error) => console.error('SERVER LOG: WebSocket error:', error));
 });
 
+// MODIFIED: Restored the manual server upgrade handler
+server.on('upgrade', (request, socket, head) => {
+    // This path must match what the client is trying to connect to.
+    // Based on our last working configuration, this should be '/ws'
+    if (request.url === '/ws') {
+        wss.handleUpgrade(request, socket, head, (ws) => {
+            wss.emit('connection', ws, request);
+        });
+    } else {
+        socket.destroy();
+    }
+});
+
+
 const interval = setInterval(function ping() {
   wss.clients.forEach(function each(ws) {
     if (ws.isAlive === false) return ws.terminate();
@@ -68,7 +83,6 @@ const interval = setInterval(function ping() {
 const authRoutes = require('./routes/auth');
 const dataRoutes = require('./routes/data');
 const authMiddleware = require('./middleware/authMiddleware');
-// MODIFIED: Added the missing model require statements
 const Budget = require("./models/Budget");
 const Expense = require("./models/Expense");
 const Income = require('./models/Income');
@@ -77,7 +91,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/data', dataRoutes);
 app.get('/api/version', (req, res) => { res.status(200).json({ version: version }); });
 
-// MODIFIED: Added all the missing API routes for budgets, expenses, and income
 // Budgets Routes
 app.get("/api/budgets", authMiddleware, async (req, res) => { try { const budgets = await Budget.find({ userId: req.user.id }); res.status(200).json(budgets); } catch (error) { console.error("GET /api/budgets Error:", error); res.status(500).json({ msg: "Server Error" }); } });
 app.post("/api/budgets", authMiddleware, async (req, res) => { try { const newBudget = new Budget({ ...req.body, userId: req.user.id }); await newBudget.save(); broadcastDataUpdate('BUDGET_DATA_UPDATED'); res.status(201).json(newBudget); } catch (error) { console.error("POST /api/budgets Error:", error); res.status(500).json({ msg: "Server Error" }); } });
