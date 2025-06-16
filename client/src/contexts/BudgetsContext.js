@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from "react";
+import React, { createContext, useContext, useEffect, useCallback } from "react";
 import { Container } from "react-bootstrap";
 import { v4 as uuidV4 } from "uuid";
 
@@ -33,6 +33,11 @@ export const BudgetsProvider = ({ children }) => {
   const [expenses, setExpenses] = useMongo("expenses", EMPTY_ARRAY);
   const [income, setIncome] = useMongo("income", EMPTY_ARRAY);
 
+  const logout = useCallback(() => {
+    // This is a placeholder for the actual logout function from AuthContext
+    // We need to ensure that the WebSocket connection is closed on logout
+  }, []);
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       setBudgets(EMPTY_ARRAY);
@@ -41,7 +46,6 @@ export const BudgetsProvider = ({ children }) => {
     }
   }, [isAuthenticated, authLoading, setBudgets, setExpenses, setIncome]);
 
-  // MODIFIED: Added robust WebSocket connection logic with reconnection
   useEffect(() => {
     if (!isAuthenticated || !token) {
       return;
@@ -51,7 +55,8 @@ export const BudgetsProvider = ({ children }) => {
     let reconnectTimeout;
 
     function connect() {
-      const WS_URL = process.env.REACT_APP_WS_URL || "wss://budget-api.technickservices.com/ws";
+      // MODIFIED: Added a trailing slash to the WebSocket URL
+      const WS_URL = (process.env.REACT_APP_WS_URL || "wss://budget.technickservices.com/ws") + "/";
       ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
@@ -62,8 +67,6 @@ export const BudgetsProvider = ({ children }) => {
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          console.log("CLIENT WebSocket: Update received -> ", message.type);
-
           const refetchData = async (key, setter) => {
             const data = await fetchDataFromAPI(key, token);
             if (data) setter(data);
@@ -91,23 +94,22 @@ export const BudgetsProvider = ({ children }) => {
         console.log("CLIENT WebSocket: Disconnected. Attempting to reconnect in 3 seconds.");
         clearTimeout(reconnectTimeout);
         reconnectTimeout = setTimeout(() => {
-            connect();
+          connect();
         }, 3000);
       };
 
       ws.onerror = (error) => {
         console.error("CLIENT WebSocket: Error:", error);
-        ws.close(); // This triggers the onclose handler for reconnection
+        ws.close();
       };
     }
 
-    connect(); // Initial connection
+    connect();
 
-    // Cleanup on component unmount or logout
     return () => {
       clearTimeout(reconnectTimeout);
       if (ws) {
-        ws.onclose = null; // Prevent reconnection logic from firing on manual close
+        ws.onclose = null;
         ws.close();
       }
     };
@@ -243,6 +245,7 @@ export const BudgetsProvider = ({ children }) => {
         updateBudget,
         updateExpense,
         updateIncome,
+        logout,
         UNCATEGORIZED_BUDGET_ID,
       }}
     >
