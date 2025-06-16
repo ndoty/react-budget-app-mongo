@@ -20,7 +20,7 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(express.json());
 
-// MongoDB Connection using environment variables
+// MongoDB Connection
 const mongoConnectionString = process.env.MONGO_URI;
 if (!mongoConnectionString) {
     console.error("FATAL ERROR: MONGO_URI is not defined.");
@@ -34,7 +34,7 @@ mongoose.connect(mongoConnectionString)
     process.exit(1);
   });
 
-// WebSocket Server Setup
+// --- WebSocket Server Setup ---
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ noServer: true });
 
@@ -57,11 +57,13 @@ wss.on('connection', (ws, req) => {
 });
 
 server.on('upgrade', (request, socket, head) => {
-    if (request.url === '/ws') {
+    if (request.url === '/ws/') {
+        console.log('✅ SERVER LOG: WebSocket upgrade request received for /ws/.');
         wss.handleUpgrade(request, socket, head, (ws) => {
             wss.emit('connection', ws, request);
         });
     } else {
+        console.log(`SERVER LOG: Denying upgrade request for unknown path: ${request.url}`);
         socket.destroy();
     }
 });
@@ -81,9 +83,14 @@ const Budget = require("./models/Budget");
 const Expense = require("./models/Expense");
 const Income = require('./models/Income');
 
-// Main API Routes
 app.use('/api/auth', authRoutes);
 app.get('/api/version', (req, res) => { res.status(200).json({ version: version }); });
+
+// MODIFIED: Added a simple test route
+app.get('/api/test', (req, res) => {
+  console.log('✅ SERVER LOG: /api/test route was successfully reached!');
+  res.status(200).json({ message: 'Backend API test route is working!' });
+});
 
 // Budgets Routes
 app.get("/api/budgets", authMiddleware, async (req, res) => { try { const budgets = await Budget.find({ userId: req.user.id }); res.status(200).json(budgets); } catch (error) { console.error("GET /api/budgets Error:", error); res.status(500).json({ msg: "Server Error" }); } });
