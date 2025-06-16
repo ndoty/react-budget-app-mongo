@@ -157,10 +157,9 @@ function BudgetAppContent() {
     <>
       <Navbar bg="light" expand="lg" className="mb-4">
         <Container>
-          {/* MODIFIED: Added the logo to the Navbar */}
+          {/* MODIFIED: Removed text and increased logo size */}
           <Navbar.Brand as={Link} to="/">
-            <Image src="/logo.png" width="30" height="30" className="d-inline-block align-top" alt="Logo" />{' '}
-            TechNick Services Budget App
+            <Image src="/logo.png" width="150" height="150" className="d-inline-block align-top" alt="TechNick Services Budget App Logo" />
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav" className="justify-content-end">
