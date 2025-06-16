@@ -8,7 +8,6 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-// MODIFIED: Updated the API URL to use the single, correct domain
 const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget.technickservices.com/api";
 
 export const AuthProvider = ({ children }) => {
@@ -23,7 +22,8 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.post(`${API_URL_BASE}/auth/login`, { username, password });
       if (response.data.token) {
         setToken(response.data.token);
-        setCurrentUser({ username });
+        // The username is now returned from the login endpoint
+        setCurrentUser(response.data.user);
         return { success: true };
       }
       return { success: false, message: "Login failed. Please try again."};
@@ -49,6 +49,20 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser(null);
   }, [setToken, setCurrentUser]);
 
+  // Function to change password
+  const changePassword = async (currentPassword, newPassword) => {
+      try {
+          const headers = { Authorization: `Bearer ${token}` };
+          const response = await axios.post(`${API_URL_BASE}/auth/change-password`, 
+              { currentPassword, newPassword },
+              { headers }
+          );
+          return { success: true, message: response.data.msg };
+      } catch (error) {
+          return { success: false, message: error.response?.data?.msg || "Password update failed." };
+      }
+  };
+
   useEffect(() => {
     setLoading(false);
   }, []);
@@ -58,7 +72,6 @@ export const AuthProvider = ({ children }) => {
       response => response,
       error => {
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-          console.error("Authentication error detected. Logging out.");
           logout();
         }
         return Promise.reject(error);
@@ -79,6 +92,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    changePassword, // Expose the new function
   };
 
   return (
