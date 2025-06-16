@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useCallback } from "react";
 import { Container } from "react-bootstrap";
 import { v4 as uuidV4 } from "uuid";
+import axios from 'axios';
 
 import useMongo, {
   postSingleItemToAPI,
@@ -11,8 +12,9 @@ import useMongo, {
 
 import { useAuth } from "./AuthContext";
 
-const EMPTY_ARRAY = [];
+const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget.technickservices.com/api";
 
+const EMPTY_ARRAY = [];
 const BudgetsContext = createContext(undefined);
 
 export function useBudgets() {
@@ -52,21 +54,17 @@ export const BudgetsProvider = ({ children }) => {
     let reconnectTimeout;
 
     function connect() {
-      // MODIFIED: This must point to the /api/ws path to work.
-      const WS_URL = "wss://budget.technickservices.com/api/ws";
-      console.log(`CLIENT LOG: Attempting to connect to WebSocket at ${WS_URL}`);
+      const WS_URL = process.env.REACT_APP_WS_URL || "wss://budget.technickservices.com/ws";
       ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
-        console.log('✅ CLIENT LOG: WebSocket connection opened successfully.');
+        console.log("CLIENT WebSocket: Connected to server.");
         clearTimeout(reconnectTimeout);
       };
 
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          console.log('✅ CLIENT LOG: Received message from server:', message);
-          
           const refetchData = async (key, setter) => {
             const data = await fetchDataFromAPI(key, token);
             if (data) setter(data);
@@ -91,13 +89,15 @@ export const BudgetsProvider = ({ children }) => {
       };
 
       ws.onclose = () => {
-        console.log("CLIENT LOG: WebSocket disconnected. Reconnecting...");
+        console.log("CLIENT WebSocket: Disconnected. Attempting to reconnect in 3 seconds.");
         clearTimeout(reconnectTimeout);
-        reconnectTimeout = setTimeout(connect, 3000);
+        reconnectTimeout = setTimeout(() => {
+          connect();
+        }, 3000);
       };
 
       ws.onerror = (error) => {
-        console.error("❌ CLIENT LOG: WebSocket error event fired.", error);
+        console.error("CLIENT WebSocket: Error:", error);
         ws.close();
       };
     }
@@ -141,13 +141,19 @@ export const BudgetsProvider = ({ children }) => {
   async function addExpense({ description, amount, budgetId, isBill, dueDate }) {
     if (!isAuthenticated || !token) return;
     const newExpense = { id: uuidV4(), description, amount, budgetId, isBill, dueDate };
-    await postSingleItemToAPI("expenses", newExpense, token);
+    const savedExpense = await postSingleItemToAPI("expenses", newExpense, token);
+    if (savedExpense) {
+      setExpenses(prev => [...prev, savedExpense]);
+    }
   }
   
   async function addIncome({ description, amount }) {
     if (!isAuthenticated || !token) return;
     const newIncome = { id: uuidV4(), description, amount };
-    await postSingleItemToAPI("income", newIncome, token);
+    const savedIncome = await postSingleItemToAPI("income", newIncome, token);
+    if (savedIncome) {
+      setIncome(prev => [...prev, savedIncome]);
+    }
   }
 
   async function addBudget({ name, max }) {
@@ -157,38 +163,104 @@ export const BudgetsProvider = ({ children }) => {
       return;
     }
     const newBudget = { id: uuidV4(), name, max };
-    await postSingleItemToAPI("budgets", newBudget, token);
+    const savedBudget = await postSingleItemToAPI("budgets", newBudget, token);
+    if (savedBudget) {
+      setBudgets(prev => [...prev, savedBudget]);
+    }
   }
 
   async function deleteBudget({ id }) {
     if (!isAuthenticated || !token) return;
-    await deleteItemFromAPI("budgets", id, token);
+    const result = await deleteItemFromAPI("budgets", id, token);
+    if (result) {
+      const updatedExpenses = await fetchDataFromAPI("expenses", token);
+      if (updatedExpenses) setExpenses(updatedExpenses);
+      setBudgets(prev => prev.filter(b => b.id !== id));
+    }
   }
     
   async function deleteIncome({ id }) {
     if (!isAuthenticated || !token) return;
-    await deleteItemFromAPI("income", id, token);
+    const result = await deleteItemFromAPI("income", id, token);
+    if (result) {
+      setIncome(prev => prev.filter(i => i.id !== id));
+    }
   }
 
   async function deleteExpense({ id }) {
     if (!isAuthenticated || !token) return;
-    await deleteItemFromAPI("expenses", id, token);
+    const result = await deleteItemFromAPI("expenses", id, token);
+    if (result) {
+      setExpenses(prev => prev.filter(e => e.id !== id));
+    }
   }
   
   async function updateBudget({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    await updateItemInAPI("budgets", id, updates, token);
+    const updatedBudget = await updateItemInAPI("budgets", id, updates, token);
+    if (updatedBudget) {
+      setBudgets(prev => prev.map(b => b.id === id ? updatedBudget : b));
+    }
   }
   
   async function updateExpense({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    await updateItemInAPI("expenses", id, updates, token);
+    const updatedExpense = await updateItemInAPI("expenses", id, updates, token);
+    if (updatedExpense) {
+      setExpenses(prev => prev.map(e => e.id === id ? updatedExpense : b));
+    }
   }
   
   async function updateIncome({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    await updateItemInAPI("income", id, updates, token);
+    const updatedIncome = await updateItemInAPI("income", id, updates, token);
+    if (updatedIncome) {
+      setIncome(prev => prev.map(i => i.id === id ? updatedIncome : i));
+    }
   }
+
+  const exportData = async () => {
+    try {
+        const headers = { Authorization: `Bearer ${token}` };
+        const response = await axios.get(`${API_URL_BASE}/data/export`, { headers });
+        
+        const dataStr = JSON.stringify(response.data, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        
+        const exportFileDefaultName = `budget-backup-${new Date().toISOString().slice(0,10)}.json`;
+
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        document.body.appendChild(linkElement);
+        linkElement.click();
+        document.body.removeChild(linkElement);
+    } catch (error) {
+        console.error("Failed to export data:", error);
+        alert("Could not export your data. Please try again.");
+    }
+  };
+
+  const importData = async (data) => {
+    if (!window.confirm("Are you sure? This will permanently delete all your current data.")) {
+        return;
+    }
+    try {
+        const headers = { Authorization: `Bearer ${token}` };
+        await axios.post(`${API_URL_BASE}/data/import`, data, { headers });
+        
+        const budgetsData = await fetchDataFromAPI("budgets", token);
+        const expensesData = await fetchDataFromAPI("expenses", token);
+        const incomeData = await fetchDataFromAPI("income", token);
+        setBudgets(budgetsData || []);
+        setExpenses(expensesData || []);
+        setIncome(incomeData || []);
+    } catch (error) {
+        console.error("Failed to import data:", error);
+        throw new Error(error.response?.data?.msg || "Import failed on the server.");
+    }
+  };
+
 
   if (authLoading) {
     return <Container className="my-4" style={{ textAlign: 'center' }}><p>Loading User Data...</p></Container>;
@@ -215,6 +287,8 @@ export const BudgetsProvider = ({ children }) => {
         updateExpense,
         updateIncome,
         logout,
+        exportData,
+        importData,
         UNCATEGORIZED_BUDGET_ID,
         BILLS_BUDGET_ID,
       }}
