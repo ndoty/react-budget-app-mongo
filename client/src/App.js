@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
-import { Button, Stack, Container, Nav, Navbar, Form, NavDropdown } from "react-bootstrap";
+import { Button, Stack, Container, Nav, Navbar, Form, NavDropdown, Image } from "react-bootstrap"; // Import Image
 
 // Components
 import AddBudgetModal from "./components/AddBudgetModal";
@@ -157,7 +157,11 @@ function BudgetAppContent() {
     <>
       <Navbar bg="light" expand="lg" className="mb-4">
         <Container>
-          <Navbar.Brand as={Link} to="/">TechNick Services Budget App</Navbar.Brand>
+          {/* MODIFIED: Added the logo to the Navbar */}
+          <Navbar.Brand as={Link} to="/">
+            <Image src="/logo.png" width="30" height="30" className="d-inline-block align-top" alt="Logo" />{' '}
+            TechNick Services Budget App
+          </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav" className="justify-content-end">
             <Nav>
