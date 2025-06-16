@@ -17,6 +17,7 @@ const API_URL_BASE = process.env.REACT_APP_API_URL || "https://budget.technickse
 const EMPTY_ARRAY = [];
 const BudgetsContext = createContext(undefined);
 
+// MODIFIED: Restored the 'export' keyword
 export function useBudgets() {
   const context = useContext(BudgetsContext);
   if (context === undefined) {
@@ -55,7 +56,7 @@ export const BudgetsProvider = ({ children }) => {
     let reconnectTimeout;
 
     function connect() {
-      // MODIFIED: Restored the correct WebSocket URL that uses the /api/ws path
+      // This uses the correct WebSocket URL that was previously working
       const WS_URL = "wss://budget.technickservices.com/api/ws";
       ws = new WebSocket(WS_URL);
 
@@ -75,7 +76,7 @@ export const BudgetsProvider = ({ children }) => {
           switch (message.type) {
             case 'BUDGET_DATA_UPDATED':
               refetchData('budgets', setBudgets);
-              refetchData('expenses', setExpenses); // Also refetch expenses if budgets change
+              refetchData('expenses', setExpenses);
               refetchData('income', setIncome);
               break;
             case 'EXPENSE_DATA_UPDATED':
@@ -224,8 +225,15 @@ export const BudgetsProvider = ({ children }) => {
         const headers = { Authorization: `Bearer ${token}` };
         await axios.post(`${API_URL_BASE}/data/import`, data, { headers });
         
-        // After import, force a refetch of all data to update the UI for all clients
-        broadcastDataUpdate('BUDGET_DATA_UPDATED');
+        // MODIFIED: After a successful import, manually refetch all data to update the UI.
+        // The WebSocket will update other open clients.
+        const budgetsData = await fetchDataFromAPI("budgets", token);
+        const expensesData = await fetchDataFromAPI("expenses", token);
+        const incomeData = await fetchDataFromAPI("income", token);
+        setBudgets(budgetsData || []);
+        setExpenses(expensesData || []);
+        setIncome(incomeData || []);
+
     } catch (error) {
         console.error("Failed to import data:", error);
         throw new Error(error.response?.data?.msg || "Import failed on the server.");
