@@ -27,16 +27,15 @@ export function useBudgets() {
 }
 
 export const BudgetsProvider = ({ children }) => {
-  const { isAuthenticated, loading: authLoading, token } = useAuth();
+  // Destructure the real logout function from AuthContext to use it
+  const { isAuthenticated, loading: authLoading, token, logout: authLogout } = useAuth();
 
   const [budgets, setBudgets] = useMongo("budgets", EMPTY_ARRAY);
   const [expenses, setExpenses] = useMongo("expenses", EMPTY_ARRAY);
   const [income, setIncome] = useMongo("income", EMPTY_ARRAY);
 
-  const logout = useCallback(() => {
-    // This is a placeholder for the actual logout function from AuthContext
-    // We need to ensure that the WebSocket connection is closed on logout
-  }, []);
+  // This is now the actual logout function from the AuthContext.
+  const logout = authLogout;
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -55,8 +54,8 @@ export const BudgetsProvider = ({ children }) => {
     let reconnectTimeout;
 
     function connect() {
-      // MODIFIED: Added a trailing slash to the WebSocket URL
-      const WS_URL = (process.env.REACT_APP_WS_URL || "wss://budget.technickservices.com/ws") + "/";
+      // REVERTED: Removed the incorrect trailing slash from the WebSocket URL.
+      const WS_URL = process.env.REACT_APP_WS_URL || "wss://budget.technickservices.com/ws";
       ws = new WebSocket(WS_URL);
 
       ws.onopen = () => {
