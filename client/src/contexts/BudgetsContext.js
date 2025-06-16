@@ -52,8 +52,8 @@ export const BudgetsProvider = ({ children }) => {
     let reconnectTimeout;
 
     function connect() {
-      // MODIFIED: Changed WebSocket URL to leverage the working /api/ route
-      const WS_URL = (process.env.REACT_APP_WS_URL || "wss://budget.technickservices.com/api/ws");
+      // MODIFIED: This now points to the correct /api/ws path.
+      const WS_URL = "wss://budget.technickservices.com/api/ws";
       console.log(`CLIENT LOG: Attempting to connect to WebSocket at ${WS_URL}`);
       ws = new WebSocket(WS_URL);
 
@@ -141,19 +141,13 @@ export const BudgetsProvider = ({ children }) => {
   async function addExpense({ description, amount, budgetId, isBill, dueDate }) {
     if (!isAuthenticated || !token) return;
     const newExpense = { id: uuidV4(), description, amount, budgetId, isBill, dueDate };
-    const savedExpense = await postSingleItemToAPI("expenses", newExpense, token);
-    if (savedExpense) {
-      setExpenses(prev => [...prev, savedExpense]);
-    }
+    await postSingleItemToAPI("expenses", newExpense, token);
   }
   
   async function addIncome({ description, amount }) {
     if (!isAuthenticated || !token) return;
     const newIncome = { id: uuidV4(), description, amount };
-    const savedIncome = await postSingleItemToAPI("income", newIncome, token);
-    if (savedIncome) {
-      setIncome(prev => [...prev, savedIncome]);
-    }
+    await postSingleItemToAPI("income", newIncome, token);
   }
 
   async function addBudget({ name, max }) {
@@ -163,64 +157,41 @@ export const BudgetsProvider = ({ children }) => {
       return;
     }
     const newBudget = { id: uuidV4(), name, max };
-    const savedBudget = await postSingleItemToAPI("budgets", newBudget, token);
-    if (savedBudget) {
-      setBudgets(prev => [...prev, savedBudget]);
-    }
+    await postSingleItemToAPI("budgets", newBudget, token);
   }
 
   async function deleteBudget({ id }) {
     if (!isAuthenticated || !token) return;
-    const result = await deleteItemFromAPI("budgets", id, token);
-    if (result) {
-      const updatedExpenses = await fetchDataFromAPI("expenses", token);
-      if (updatedExpenses) setExpenses(updatedExpenses);
-      setBudgets(prev => prev.filter(b => b.id !== id));
-    }
+    await deleteItemFromAPI("budgets", id, token);
   }
     
   async function deleteIncome({ id }) {
     if (!isAuthenticated || !token) return;
-    const result = await deleteItemFromAPI("income", id, token);
-    if (result) {
-      setIncome(prev => prev.filter(i => i.id !== id));
-    }
+    await deleteItemFromAPI("income", id, token);
   }
 
   async function deleteExpense({ id }) {
     if (!isAuthenticated || !token) return;
-    const result = await deleteItemFromAPI("expenses", id, token);
-    if (result) {
-      setExpenses(prev => prev.filter(e => e.id !== id));
-    }
+    await deleteItemFromAPI("expenses", id, token);
   }
   
   async function updateBudget({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    const updatedBudget = await updateItemInAPI("budgets", id, updates, token);
-    if (updatedBudget) {
-      setBudgets(prev => prev.map(b => b.id === id ? updatedBudget : b));
-    }
+    await updateItemInAPI("budgets", id, updates, token);
   }
   
   async function updateExpense({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    const updatedExpense = await updateItemInAPI("expenses", id, updates, token);
-    if (updatedExpense) {
-      setExpenses(prev => prev.map(e => e.id === id ? updatedExpense : e));
-    }
+    await updateItemInAPI("expenses", id, updates, token);
   }
   
   async function updateIncome({ id, ...updates }) {
     if (!isAuthenticated || !token) return;
-    const updatedIncome = await updateItemInAPI("income", id, updates, token);
-    if (updatedIncome) {
-      setIncome(prev => prev.map(i => i.id === id ? updatedIncome : i));
-    }
+    await updateItemInAPI("income", id, updates, token);
   }
 
   if (authLoading) {
-    return <Container className="my-4" style={{ textAlign: 'center' }}><p>Loading User Data (waiting for auth)...</p></Container>;
+    return <Container className="my-4" style={{ textAlign: 'center' }}><p>Loading User Data...</p></Container>;
   }
 
   return (
