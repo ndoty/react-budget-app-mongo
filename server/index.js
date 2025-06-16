@@ -20,7 +20,7 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(express.json());
 
-// MongoDB Connection
+// MongoDB Connection using environment variables
 const mongoConnectionString = process.env.MONGO_URI;
 if (!mongoConnectionString) {
     console.error("FATAL ERROR: MONGO_URI is not defined.");
@@ -34,7 +34,7 @@ mongoose.connect(mongoConnectionString)
     process.exit(1);
   });
 
-// --- WebSocket Server Setup ---
+// WebSocket Server Setup
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ noServer: true });
 
@@ -77,11 +77,11 @@ const interval = setInterval(function ping() {
 // --- ROUTES ---
 const authRoutes = require('./routes/auth');
 const authMiddleware = require('./middleware/authMiddleware');
-// MODIFIED: Added the missing model require statements
 const Budget = require("./models/Budget");
 const Expense = require("./models/Expense");
 const Income = require('./models/Income');
 
+// Main API Routes
 app.use('/api/auth', authRoutes);
 app.get('/api/version', (req, res) => { res.status(200).json({ version: version }); });
 
