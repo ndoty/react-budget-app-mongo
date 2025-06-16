@@ -26,7 +26,6 @@ if (!mongoConnectionString) {
     console.error("FATAL ERROR: MONGO_URI is not defined.");
     process.exit(1);
 }
-
 mongoose.connect(mongoConnectionString)
   .then(() => console.log('SERVER LOG: MongoDB Connected Successfully!'))
   .catch(err => {
@@ -56,17 +55,19 @@ wss.on('connection', (ws, req) => {
   ws.on('error', (error) => console.error('SERVER LOG: WebSocket error:', error));
 });
 
+// MODIFIED: Changed the path for the manual HTTP upgrade request
 server.on('upgrade', (request, socket, head) => {
-    // This path must match what the client is trying to connect to.
-    if (request.url === '/ws') {
+    // This now checks for the new path
+    if (request.url === '/api/ws') {
+        console.log('✅ SERVER LOG: WebSocket upgrade request received for /api/ws.');
         wss.handleUpgrade(request, socket, head, (ws) => {
             wss.emit('connection', ws, request);
         });
     } else {
+        console.log(`SERVER LOG: Denying upgrade request for unknown path: ${request.url}`);
         socket.destroy();
     }
 });
-
 
 const interval = setInterval(function ping() {
   wss.clients.forEach(function each(ws) {
@@ -78,16 +79,18 @@ const interval = setInterval(function ping() {
 
 // --- ROUTES ---
 const authRoutes = require('./routes/auth');
-const dataRoutes = require('./routes/data');
 const authMiddleware = require('./middleware/authMiddleware');
-// MODIFIED: Restored the missing model require statements
 const Budget = require("./models/Budget");
 const Expense = require("./models/Expense");
 const Income = require('./models/Income');
 
 app.use('/api/auth', authRoutes);
-app.use('/api/data', dataRoutes);
 app.get('/api/version', (req, res) => { res.status(200).json({ version: version }); });
+
+app.get('/api/test', (req, res) => {
+  console.log('✅ SERVER LOG: /api/test route was successfully reached!');
+  res.status(200).json({ message: 'Backend API test route is working!' });
+});
 
 // Budgets Routes
 app.get("/api/budgets", authMiddleware, async (req, res) => { try { const budgets = await Budget.find({ userId: req.user.id }); res.status(200).json(budgets); } catch (error) { console.error("GET /api/budgets Error:", error); res.status(500).json({ msg: "Server Error" }); } });
@@ -109,4 +112,5 @@ app.put("/api/income/:id", authMiddleware, async (req, res) => { try { const { d
 
 
 server.listen(PORT, () => {
-  console.log(`SERVER LOG: Backend with WebSocket support is running on port
+  console.log(`SERVER LOG: Backend with WebSocket support is running on port ${PORT}`);
+});
