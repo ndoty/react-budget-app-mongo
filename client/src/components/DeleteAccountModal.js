@@ -7,6 +7,7 @@ export default function DeleteAccountModal({ show, handleClose }) {
   const passwordRef = useRef();
   const [error, setError] = useState("");
   const { deleteAccount } = useAuth();
+  // This correctly retrieves the exportData function from the context
   const { exportData } = useBudgets();
 
   const handleDelete = async () => {
@@ -19,8 +20,6 @@ export default function DeleteAccountModal({ show, handleClose }) {
 
     if (success) {
       alert("Your account has been permanently deleted.");
-      // The logout function will be called by the auth context automatically
-      // because the token will become invalid.
       handleClose();
     } else {
       setError(message);
@@ -50,6 +49,7 @@ export default function DeleteAccountModal({ show, handleClose }) {
         </Alert>
         {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
         <div className="d-grid gap-2">
+            {/* The onClick handler is now correctly wired to the exportData function */}
             <Button variant="info" onClick={exportData}>
                 Download My Data
             </Button>
