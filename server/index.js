@@ -22,25 +22,56 @@ app.use(express.json());
 
 // MongoDB Connection
 const mongoConnectionString = process.env.MONGO_URI;
-// ... (MongoDB connection logic)
+if (!mongoConnectionString) {
+    console.error("FATAL ERROR: MONGO_URI is not defined.");
+    process.exit(1);
+}
+
+mongoose.connect(mongoConnectionString)
+  .then(() => console.log('SERVER LOG: MongoDB Connected Successfully!'))
+  .catch(err => {
+    console.error('SERVER ERROR: MongoDB Connection Failed! Details:', err.message);
+    process.exit(1);
+  });
 
 // --- WebSocket Server Setup ---
 const server = http.createServer(app);
-// ... (WebSocket setup logic)
+const wss = new WebSocket.Server({ server, path: "/ws" });
+
+function broadcastDataUpdate(updateType) {
+  const message = JSON.stringify({ type: updateType });
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+}
+
+wss.on('connection', (ws, req) => {
+  console.log('✅ SERVER LOG: WebSocket client connected!');
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
+  ws.send(JSON.stringify({ type: 'welcome', message: 'Successfully connected to backend WebSocket.' }));
+  ws.on('close', () => console.log('SERVER LOG: WebSocket client disconnected.'));
+  ws.on('error', (error) => console.error('SERVER LOG: WebSocket error:', error));
+});
+
+const interval = setInterval(function ping() {
+  wss.clients.forEach(function each(ws) {
+    if (ws.isAlive === false) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
 
 // --- ROUTES ---
 const authRoutes = require('./routes/auth');
-const dataRoutes = require('./routes/data'); // Import the new data routes
+const dataRoutes = require('./routes/data');
 const authMiddleware = require('./middleware/authMiddleware');
-const Budget = require("./models/Budget");
-const Expense = require("./models/Expense");
-const Income = require('./models/Income');
 
 app.use('/api/auth', authRoutes);
-app.use('/api/data', dataRoutes); // Use the new data routes
+app.use('/api/data', dataRoutes);
 app.get('/api/version', (req, res) => { res.status(200).json({ version: version }); });
-
-// ... (Your other API routes for budgets, expenses, income)
 
 server.listen(PORT, () => {
   console.log(`SERVER LOG: Backend with WebSocket support is running on port ${PORT}`);
