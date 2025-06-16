@@ -57,7 +57,6 @@ wss.on('connection', (ws, req) => {
 
 // MODIFIED: This correctly checks for the /api/ws path.
 server.on('upgrade', (request, socket, head) => {
-    // This now checks for the new path
     if (request.url === '/api/ws') {
         console.log('✅ SERVER LOG: WebSocket upgrade request received for /api/ws.');
         wss.handleUpgrade(request, socket, head, (ws) => {
