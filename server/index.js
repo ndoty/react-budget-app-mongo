@@ -55,9 +55,10 @@ wss.on('connection', (ws, req) => {
   ws.on('error', (error) => console.error('SERVER LOG: WebSocket error:', error));
 });
 
+// MODIFIED: Restored the correct WebSocket upgrade handler path
 server.on('upgrade', (request, socket, head) => {
     // This path must match what the client is trying to connect to.
-    if (request.url === '/ws') {
+    if (request.url === '/api/ws') {
         wss.handleUpgrade(request, socket, head, (ws) => {
             wss.emit('connection', ws, request);
         });
@@ -65,6 +66,7 @@ server.on('upgrade', (request, socket, head) => {
         socket.destroy();
     }
 });
+
 
 const interval = setInterval(function ping() {
   wss.clients.forEach(function each(ws) {
@@ -76,14 +78,14 @@ const interval = setInterval(function ping() {
 
 // --- ROUTES ---
 const authRoutes = require('./routes/auth');
-const dataRoutes = require('./routes/data'); // Import the new data routes
+const dataRoutes = require('./routes/data');
 const authMiddleware = require('./middleware/authMiddleware');
 const Budget = require("./models/Budget");
 const Expense = require("./models/Expense");
 const Income = require('./models/Income');
 
 app.use('/api/auth', authRoutes);
-app.use('/api/data', dataRoutes); // Use the new data routes
+app.use('/api/data', dataRoutes);
 app.get('/api/version', (req, res) => { res.status(200).json({ version: version }); });
 
 // Budgets Routes
