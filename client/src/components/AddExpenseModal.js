@@ -1,18 +1,27 @@
 import { Form, Modal, Button } from "react-bootstrap";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useBudgets, UNCATEGORIZED_BUDGET_ID, BILLS_BUDGET_ID } from "../contexts/BudgetsContext";
 
 export default function AddExpenseModal({
   show,
   handleClose,
   defaultBudgetId,
+  isBillDefault = false,
 }) {
   const descriptionRef = useRef();
   const amountRef = useRef();
   const budgetIdRef = useRef();
   const dueDateRef = useRef();
   const { addExpense, budgets } = useBudgets();
-  const [isBill, setIsBill] = useState(false);
+  
+  const [isBill, setIsBill] = useState(isBillDefault);
+
+  // This effect synchronizes the internal 'isBill' state with the
+  // prop passed to the modal each time it is shown. This ensures
+  // the checkbox is correctly checked when opening in "bill mode".
+  useEffect(() => {
+    setIsBill(isBillDefault);
+  }, [isBillDefault, show]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -28,14 +37,9 @@ export default function AddExpenseModal({
     });
     handleClose();
   }
-
-  const handleModalClose = () => {
-    setIsBill(false);
-    handleClose();
-  }
-
+  
   return (
-    <Modal show={show} onHide={handleModalClose}>
+    <Modal show={show} onHide={handleClose}>
       <Form onSubmit={handleSubmit}>
         <Modal.Header closeButton>
           <Modal.Title>New Expense</Modal.Title>
@@ -67,7 +71,6 @@ export default function AddExpenseModal({
           {isBill && (
             <Form.Group className="mb-3" controlId="dueDate">
               <Form.Label>Due Date (Day of Month)</Form.Label>
-              {/* MODIFIED: Reverted input to type="number" */}
               <Form.Control
                 ref={dueDateRef}
                 type="number"

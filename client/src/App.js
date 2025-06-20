@@ -26,7 +26,7 @@ import Logo from './components/Logo';
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 
-// --- Authentication Pages (No longer need a separate layout) ---
+// --- Authentication Pages ---
 function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -133,7 +133,7 @@ function BudgetAppContent({ openAddExpenseModal, setShowAddBudgetModal, setShowA
         <h1 className="me-auto" style={{visibility: 'hidden'}}>Budgets</h1>
         <Button variant="primary" onClick={() => setShowAddBudgetModal(true)}>Add Budget</Button>
         <Button variant="success" onClick={() => setShowAddIncomeModal(true)}>Add Income</Button>
-        <Button variant="outline-primary" onClick={() => openAddExpenseModal()}>Add Expense / Bill</Button>
+        <Button variant="outline-primary" onClick={() => openAddExpenseModal(null, false)}>Add Expense / Bill</Button>
       </Stack>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
         <TotalBudgetCard onViewIncomeClick={onViewIncomeClick} onViewBillsClick={onViewBillsClick} />
@@ -145,13 +145,13 @@ function BudgetAppContent({ openAddExpenseModal, setShowAddBudgetModal, setShowA
               name={budget.name}
               amount={amount}
               max={budget.max}
-              onAddExpenseClick={() => openAddExpenseModal(budget.id)}
+              onAddExpenseClick={() => openAddExpenseModal(budget.id, false)}
               onViewExpensesClick={() => setViewExpensesModalBudgetId(budget.id)}
               onEditBudgetClick={() => setEditBudgetModalId(budget.id)}
             />
           );
         })}
-        <UncategorizedBudgetCard onAddExpenseClick={() => openAddExpenseModal()} onViewExpensesClick={() => setViewExpensesModalBudgetId(UNCATEGORIZED_BUDGET_ID)} />
+        <UncategorizedBudgetCard onAddExpenseClick={() => openAddExpenseModal(UNCATEGORIZED_BUDGET_ID, false)} onViewExpensesClick={() => setViewExpensesModalBudgetId(UNCATEGORIZED_BUDGET_ID)} />
       </div>
     </Container>
   );
@@ -178,7 +178,7 @@ function AppLayout() {
   const { exportData } = useBudgets();
   const navigate = useNavigate();
 
-  // State for all modals
+  // State for all modals is lifted to this central layout component
   const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [addExpenseModalBudgetId, setAddExpenseModalBudgetId] = useState();
@@ -193,10 +193,8 @@ function AppLayout() {
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showImportDataModal, setShowImportDataModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
-  // This new state controls if the Add Expense modal should default to being a bill
   const [addExpenseAsBill, setAddExpenseAsBill] = useState(false);
 
-  // Updated function to handle opening the Add Expense modal in different modes
   const openAddExpenseModal = (budgetId, isBill = false) => {
     setShowAddExpenseModal(true);
     setAddExpenseModalBudgetId(budgetId);
@@ -208,10 +206,9 @@ function AppLayout() {
     navigate("/login");
   };
   
-  // This function is passed to the ViewBillsModal
   const handleAddBillClick = () => {
-    setShowViewBillsModal(false); // Close the bills modal
-    openAddExpenseModal(null, true); // Open the expense modal, defaulting to a bill
+    setShowViewBillsModal(false);
+    openAddExpenseModal(null, true);
   };
 
   return (
@@ -276,7 +273,7 @@ function AppLayout() {
         isBillDefault={addExpenseAsBill}
         handleClose={() => {
             setShowAddExpenseModal(false);
-            setAddExpenseAsBill(false); // Reset the default on close
+            setAddExpenseAsBill(false);
         }} 
       />
       <AddIncomeModal show={showAddIncomeModal} handleClose={() => setShowAddIncomeModal(false)} />
@@ -291,7 +288,7 @@ function AppLayout() {
         show={showViewBillsModal} 
         handleClose={() => setShowViewBillsModal(false)} 
         onEditExpenseClick={(id) => { setShowViewBillsModal(false); setEditExpenseId(id); }}
-        onAddBillClick={handleAddBillClick} // Pass the handler to the modal
+        onAddBillClick={handleAddBillClick}
       />
       <EditBudgetModal show={editBudgetModalId != null} handleClose={() => setEditBudgetModalId(null)} budgetId={editBudgetModalId} />
       <EditExpenseModal show={editExpenseId != null} handleClose={() => setEditExpenseId(null)} expenseId={editExpenseId} />
