@@ -1,11 +1,37 @@
+# This version of the compose file is optimized for Docker Swarm deployments.
 services:
-  backend:
-    build: ./server
-    restart: unless-stopped
+  # This service runs a local Docker registry to store your images.
+  # This allows all nodes in the Swarm to access the same image versions.
+  registry:
+    image: registry:2
     ports:
-      - "5001:5000"
-    env_file: .env
+      - "5000:5000"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
 
+  # Backend Service (Node.js API)
+  backend:
+    # The 'build' context tells docker-compose how to build this image.
+    build: ./server
+    # The 'image' tag specifies the name for the built image,
+    # pointing to the local registry.
+    image: 127.0.0.1:5000/tns-budget-backend:latest
+    env_file: .env # Load environment variables from the .env file
+    secrets:
+      - mongo_user
+      - mongo_pass
+      - jwt_secret
+    deploy:
+      replicas: 1 # We run a single backend replica to avoid WebSocket state issues
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+
+  # Frontend Service (React App served by Nginx)
   frontend:
     build:
       context: ./client
@@ -13,8 +39,25 @@ services:
         REACT_APP_API_URL: ${REACT_APP_API_URL}
         REACT_APP_WS_URL: ${REACT_APP_WS_URL}
         REACT_APP_VERSION: ${REACT_APP_VERSION}
-    restart: unless-stopped
+    image: 127.0.0.1:5000/tns-budget-frontend:latest
     ports:
+      # This maps the host port 3000 to the container port 3000.
       - "3000:3000"
-    depends_on:
-      - backend
+    deploy:
+      replicas: 2 # Running 2 frontend replicas for high availability
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+
+# This section defines the secrets and tells Docker Swarm to create them
+# from the local files in your project directory.
+secrets:
+  mongo_user:
+    file: ./mongo_user.txt
+  mongo_pass:
+    file: ./mongo_pass.txt
+  jwt_secret:
+    file: ./jwt_secret.txt
