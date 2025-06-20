@@ -17,7 +17,10 @@ services:
     # The 'image' tag specifies the name for the built image,
     # pointing to the local registry.
     image: 127.0.0.1:5000/tns-budget-backend:latest
-    env_file: .env # Load environment variables from the .env file
+    environment:
+      # Non-sensitive environment variables are defined here.
+      # The MONGO_URI is loaded from your .env file by the shell, not by Docker Swarm.
+      - MONGO_URI=${MONGO_URI}
     secrets:
       - mongo_user
       - mongo_pass
@@ -43,6 +46,8 @@ services:
     ports:
       # This maps the host port 3000 to the container port 3000.
       - "3000:3000"
+    depends_on:
+      - backend
     deploy:
       replicas: 2 # Running 2 frontend replicas for high availability
       update_config:
