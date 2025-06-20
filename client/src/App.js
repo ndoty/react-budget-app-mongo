@@ -124,7 +124,6 @@ function RegisterPage() {
 }
 
 // --- Main application component for budgets ---
-// MODIFIED: This component now accepts the click handlers as props
 function BudgetAppContent({ openAddExpenseModal, setShowAddBudgetModal, setShowAddIncomeModal, setViewExpensesModalBudgetId, setEditBudgetModalId, onViewIncomeClick, onViewBillsClick }) {
   const { budgets, getBudgetExpenses } = useBudgets();
   
@@ -137,7 +136,6 @@ function BudgetAppContent({ openAddExpenseModal, setShowAddBudgetModal, setShowA
         <Button variant="outline-primary" onClick={() => openAddExpenseModal()}>Add Expense / Bill</Button>
       </Stack>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "1rem", alignItems: "flex-start" }}>
-        {/* MODIFIED: The handlers are passed to the TotalBudgetCard */}
         <TotalBudgetCard onViewIncomeClick={onViewIncomeClick} onViewBillsClick={onViewBillsClick} />
         { Array.isArray(budgets) && budgets.map((budget) => {
           const amount = getBudgetExpenses(budget.id).reduce((total, expense) => total + expense.amount, 0);
@@ -180,7 +178,7 @@ function AppLayout() {
   const { exportData } = useBudgets();
   const navigate = useNavigate();
 
-  // State for all modals is lifted to this central layout component
+  // State for all modals
   const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [addExpenseModalBudgetId, setAddExpenseModalBudgetId] = useState();
@@ -195,15 +193,25 @@ function AppLayout() {
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showImportDataModal, setShowImportDataModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  // This new state controls if the Add Expense modal should default to being a bill
+  const [addExpenseAsBill, setAddExpenseAsBill] = useState(false);
 
-  const openAddExpenseModal = (budgetId) => {
+  // Updated function to handle opening the Add Expense modal in different modes
+  const openAddExpenseModal = (budgetId, isBill = false) => {
     setShowAddExpenseModal(true);
     setAddExpenseModalBudgetId(budgetId);
+    setAddExpenseAsBill(isBill);
   };
   
   const handleLogout = () => {
     logout();
     navigate("/login");
+  };
+  
+  // This function is passed to the ViewBillsModal
+  const handleAddBillClick = () => {
+    setShowViewBillsModal(false); // Close the bills modal
+    openAddExpenseModal(null, true); // Open the expense modal, defaulting to a bill
   };
 
   return (
@@ -245,7 +253,6 @@ function AppLayout() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/" element={
             <ProtectedRoute>
-              {/* MODIFIED: The handlers are now passed down to the content component */}
               <BudgetAppContent 
                 openAddExpenseModal={openAddExpenseModal}
                 setShowAddBudgetModal={setShowAddBudgetModal}
@@ -261,9 +268,17 @@ function AppLayout() {
         </Routes>
       </main>
 
-      {/* All modals are rendered here, controlled by the state in this layout component */}
+      {/* All modals are rendered here */}
       <AddBudgetModal show={showAddBudgetModal} handleClose={() => setShowAddBudgetModal(false)} />
-      <AddExpenseModal show={showAddExpenseModal} defaultBudgetId={addExpenseModalBudgetId} handleClose={() => setShowAddExpenseModal(false)} />
+      <AddExpenseModal 
+        show={showAddExpenseModal} 
+        defaultBudgetId={addExpenseModalBudgetId}
+        isBillDefault={addExpenseAsBill}
+        handleClose={() => {
+            setShowAddExpenseModal(false);
+            setAddExpenseAsBill(false); // Reset the default on close
+        }} 
+      />
       <AddIncomeModal show={showAddIncomeModal} handleClose={() => setShowAddIncomeModal(false)} />
       <ViewExpensesModal 
         budgetId={viewExpensesModalBudgetId} 
@@ -272,7 +287,12 @@ function AppLayout() {
         onMoveExpenseClick={(id) => { setViewExpensesModalBudgetId(); setMoveExpenseModalId(id); }}
       />
       <ViewIncomeModal show={showViewIncomeModal} handleClose={() => setShowViewIncomeModal(false)} onEditIncomeClick={(id) => { setShowViewIncomeModal(false); setEditIncomeModalId(id); }} />
-      <ViewBillsModal show={showViewBillsModal} handleClose={() => setShowViewBillsModal(false)} onEditExpenseClick={(id) => { setShowViewBillsModal(false); setEditExpenseId(id); }} />
+      <ViewBillsModal 
+        show={showViewBillsModal} 
+        handleClose={() => setShowViewBillsModal(false)} 
+        onEditExpenseClick={(id) => { setShowViewBillsModal(false); setEditExpenseId(id); }}
+        onAddBillClick={handleAddBillClick} // Pass the handler to the modal
+      />
       <EditBudgetModal show={editBudgetModalId != null} handleClose={() => setEditBudgetModalId(null)} budgetId={editBudgetModalId} />
       <EditExpenseModal show={editExpenseId != null} handleClose={() => setEditExpenseId(null)} expenseId={editExpenseId} />
       <EditIncomeModal show={editIncomeModalId != null} handleClose={() => setEditIncomeModalId(null)} incomeId={editIncomeModalId} />

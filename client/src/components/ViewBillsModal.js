@@ -2,28 +2,29 @@ import { Modal, Button, Stack } from "react-bootstrap";
 import { useBudgets } from "../contexts/BudgetsContext";
 import { currencyFormatter } from "../utils";
 
-export default function ViewBillsModal({ show, handleClose, onEditExpenseClick }) {
+// Add the new onAddBillClick prop
+export default function ViewBillsModal({ show, handleClose, onEditExpenseClick, onAddBillClick }) {
   const { getBillExpenses, deleteExpense } = useBudgets();
 
   const billExpenses = getBillExpenses();
-  // MODIFIED: Improved sorting to handle missing due dates and sort by day number
   const sortedBillExpenses = [...billExpenses].sort((a, b) => {
-    // Bills without a due date go to the end
-    if (a.dueDate == null) return 1;
-    if (b.dueDate == null) return -1;
-
-    // Sort by the day number
     if (a.dueDate < b.dueDate) return -1;
     if (a.dueDate > b.dueDate) return 1;
-
-    // As a fallback, sort by description
     return a.description.localeCompare(b.description);
   });
 
   return (
     <Modal show={show} onHide={handleClose}>
       <Modal.Header closeButton>
-        <Modal.Title>Recurring Bills</Modal.Title>
+        <Modal.Title>
+          <Stack direction="horizontal" gap="3">
+            <div>Recurring Bills</div>
+            {/* This new button will open the Add Expense modal in "bill mode" */}
+            <Button variant="primary" size="sm" onClick={onAddBillClick}>
+              Add Bill
+            </Button>
+          </Stack>
+        </Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <Stack direction="vertical" gap="3">
