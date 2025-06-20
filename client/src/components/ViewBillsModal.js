@@ -2,6 +2,7 @@ import { Modal, Button, Stack } from "react-bootstrap";
 import { useBudgets } from "../contexts/BudgetsContext";
 import { currencyFormatter } from "../utils";
 
+// Add the new onAddBillClick prop
 export default function ViewBillsModal({ show, handleClose, onEditExpenseClick, onAddBillClick }) {
   const { getBillExpenses, deleteExpense } = useBudgets();
 
@@ -18,6 +19,7 @@ export default function ViewBillsModal({ show, handleClose, onEditExpenseClick, 
         <Modal.Title>
           <Stack direction="horizontal" gap="3">
             <div>Recurring Bills</div>
+            {/* This new button will open the Add Expense modal in "bill mode" */}
             <Button variant="primary" size="sm" onClick={onAddBillClick}>
               Add Bill
             </Button>

@@ -26,7 +26,7 @@ import Logo from './components/Logo';
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 
-// --- Authentication Pages ---
+// --- Authentication Pages (No longer need a separate layout) ---
 function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -178,7 +178,7 @@ function AppLayout() {
   const { exportData } = useBudgets();
   const navigate = useNavigate();
 
-  // State for all modals is lifted to this central layout component
+  // State for all modals
   const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [addExpenseModalBudgetId, setAddExpenseModalBudgetId] = useState();

@@ -6,6 +6,7 @@ export default function AddExpenseModal({
   show,
   handleClose,
   defaultBudgetId,
+  // This new prop will tell the modal to default to creating a bill
   isBillDefault = false,
 }) {
   const descriptionRef = useRef();
@@ -14,11 +15,11 @@ export default function AddExpenseModal({
   const dueDateRef = useRef();
   const { addExpense, budgets } = useBudgets();
   
+  // The 'isBill' checkbox is now controlled by React state
   const [isBill, setIsBill] = useState(isBillDefault);
 
-  // This effect synchronizes the internal 'isBill' state with the
-  // prop passed to the modal each time it is shown. This ensures
-  // the checkbox is correctly checked when opening in "bill mode".
+  // This effect ensures the modal's state resets correctly
+  // each time it is opened.
   useEffect(() => {
     setIsBill(isBillDefault);
   }, [isBillDefault, show]);
@@ -26,6 +27,7 @@ export default function AddExpenseModal({
   function handleSubmit(e) {
     e.preventDefault();
     
+    // If it's a bill, the budgetId is "Bills". Otherwise, use the dropdown value.
     const expenseBudgetId = isBill ? BILLS_BUDGET_ID : budgetIdRef.current.value;
 
     addExpense({
