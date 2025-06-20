@@ -5,7 +5,6 @@ import { currencyFormatter } from "../utils";
 export default function ViewExpensesModal({ budgetId, handleClose, onEditExpenseClick, onMoveExpenseClick }) {
   const { getBudgetExpenses, budgets, deleteBudget, deleteExpense } = useBudgets();
 
-  // MODIFIED: Removed client-side sort. Data is now pre-sorted by the API.
   const expenses = getBudgetExpenses(budgetId) || [];
   
   const budget = budgetId === UNCATEGORIZED_BUDGET_ID
@@ -13,7 +12,7 @@ export default function ViewExpensesModal({ budgetId, handleClose, onEditExpense
       : (Array.isArray(budgets) ? budgets.find(b => b.id === budgetId) : undefined);
 
   return (
-    <Modal show={budgetId != null} onHide={handleClose}>
+    <Modal show={budgetId != null} onHide={handleClose} scrollable={true}>
       <Modal.Header closeButton>
         <Modal.Title>
           <Stack direction="horizontal" gap="2">
@@ -36,7 +35,6 @@ export default function ViewExpensesModal({ budgetId, handleClose, onEditExpense
       </Modal.Header>
       <Modal.Body>
         <Stack direction="vertical" gap="3">
-          {/* Map over the expenses array directly */}
           {expenses.map(expense => (
             <Stack direction="horizontal" gap="2" key={expense.id}>
               <div className="me-auto fs-4">{expense.description}</div>

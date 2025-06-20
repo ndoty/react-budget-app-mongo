@@ -2,19 +2,15 @@ import { Modal, Button, Stack } from "react-bootstrap";
 import { useBudgets } from "../contexts/BudgetsContext";
 import { currencyFormatter } from "../utils";
 
-// Add the new onAddIncomeClick prop
 export default function ViewIncomeModal({ show, handleClose, onEditIncomeClick, onAddIncomeClick }) {
   const { income, deleteIncome } = useBudgets();
 
-  // The income list is already sorted by date from the API, so no client-side sort is needed.
-
   return (
-    <Modal show={show} onHide={handleClose}>
+    <Modal show={show} onHide={handleClose} scrollable={true}>
       <Modal.Header closeButton>
         <Modal.Title>
           <Stack direction="horizontal" gap="3">
             <div>Income</div>
-            {/* This new button will open the Add Income modal */}
             <Button variant="primary" size="sm" onClick={onAddIncomeClick}>
               Add Income
             </Button>
