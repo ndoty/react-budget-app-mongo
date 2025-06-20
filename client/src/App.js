@@ -26,7 +26,7 @@ import Logo from './components/Logo';
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 
-// --- Authentication Pages (No longer need a separate layout) ---
+// --- Authentication Pages ---
 function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -211,6 +211,12 @@ function AppLayout() {
     openAddExpenseModal(null, true);
   };
 
+  // This new handler opens the Add Income modal from the View Income modal
+  const handleAddIncomeClick = () => {
+    setShowViewIncomeModal(false); // Close the view modal
+    setShowAddIncomeModal(true); // Open the add modal
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar bg="light" expand="lg" className="mb-4">
@@ -283,7 +289,13 @@ function AppLayout() {
         onEditExpenseClick={(id) => { setViewExpensesModalBudgetId(); setEditExpenseId(id); }}
         onMoveExpenseClick={(id) => { setViewExpensesModalBudgetId(); setMoveExpenseModalId(id); }}
       />
-      <ViewIncomeModal show={showViewIncomeModal} handleClose={() => setShowViewIncomeModal(false)} onEditIncomeClick={(id) => { setShowViewIncomeModal(false); setEditIncomeModalId(id); }} />
+      {/* Pass the new handler to the ViewIncomeModal */}
+      <ViewIncomeModal 
+        show={showViewIncomeModal} 
+        handleClose={() => setShowViewIncomeModal(false)} 
+        onEditIncomeClick={(id) => { setShowViewIncomeModal(false); setEditIncomeModalId(id); }}
+        onAddIncomeClick={handleAddIncomeClick}
+      />
       <ViewBillsModal 
         show={showViewBillsModal} 
         handleClose={() => setShowViewBillsModal(false)} 
