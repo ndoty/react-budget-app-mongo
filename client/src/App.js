@@ -21,6 +21,8 @@ import ChangePasswordModal from "./components/ChangePasswordModal";
 import ImportDataModal from "./components/ImportDataModal";
 import DeleteAccountModal from "./components/DeleteAccountModal";
 import Logo from './components/Logo';
+import ForgotPassword from "./components/ForgotPassword";
+import ResetPassword from "./components/ResetPassword";
 
 // Contexts & Hooks
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
@@ -61,6 +63,9 @@ function LoginPage() {
           </Form.Group>
           <Button className="w-100 mt-3" type="submit">Log In</Button>
         </Form>
+        <div className="w-100 text-center mt-2">
+          <Link to="/forgot-password">Forgot Password?</Link>
+        </div>
         <div className="w-100 text-center mt-2">
           Need an account? <Link to="/register">Register</Link>
         </div>
@@ -254,6 +259,8 @@ function AppLayout() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/" element={
             <ProtectedRoute>
               <BudgetAppContent 
@@ -327,4 +334,5 @@ function App() {
     </Router>
   );
 }
+
 export default App;

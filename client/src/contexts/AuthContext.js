@@ -61,6 +61,24 @@ export const AuthProvider = ({ children }) => {
       }
   };
 
+  const forgotPassword = async (username) => {
+    try {
+      const response = await axios.post(`${API_URL_BASE}/auth/forgot-password`, { username });
+      return { success: true, message: response.data.msg };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.msg || "Failed to send reset email." };
+    }
+  };
+
+  const resetPassword = async (token, password) => {
+    try {
+      const response = await axios.post(`${API_URL_BASE}/auth/reset-password/${token}`, { password });
+      return { success: true, message: response.data.msg };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.msg || "Failed to reset password." };
+    }
+  };
+
   // Function to delete the user's account
   const deleteAccount = async (password) => {
       try {
@@ -108,6 +126,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     changePassword,
     deleteAccount, // Expose the new function
+    forgotPassword,
+    resetPassword,
   };
 
   return (

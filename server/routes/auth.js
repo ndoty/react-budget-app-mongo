@@ -2,26 +2,33 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const fs = require('fs');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const mg = require('nodemailer-mailgun-transport');
 const User = require('../models/User');
-const Budget = require('../models/Budget'); // Import Budget model
-const Expense = require('../models/Expense'); // Import Expense model
-const Income = require('../models/Income'); // Import Income model
+const Budget = require('../models/Budget');
+const Expense = require('../models/Expense');
+const Income = require('../models/Income');
 const authMiddleware = require('../middleware/authMiddleware');
 
-// Function to read the JWT secret securely
-function getJwtSecret() {
-    const secretPath = '/run/secrets/jwt_secret';
-    if (fs.existsSync(secretPath)) {
-        return fs.readFileSync(secretPath, 'utf-8').trim();
-    }
-    return process.env.JWT_SECRET;
+// Read credentials directly from environment variables
+const JWT_SECRET = process.env.JWT_SECRET;
+const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
+const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN;
+
+if (!JWT_SECRET || !MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
+    throw new Error("One or more required environment variables are not set. The application cannot start.");
 }
 
-const JWT_SECRET = getJwtSecret();
-if (!JWT_SECRET) {
-    throw new Error("JWT_SECRET is not set. The application cannot start.");
-}
+// Mailgun transport using environment variables
+const mailgunAuth = {
+  auth: {
+    api_key: MAILGUN_API_KEY,
+    domain: MAILGUN_DOMAIN
+  }
+};
+
+const nodemailerMailgun = nodemailer.createTransport(mg(mailgunAuth));
 
 // @route   POST api/auth/register
 // @desc    Register a new user
@@ -108,9 +115,73 @@ router.post('/change-password', authMiddleware, async (req, res) => {
     }
 });
 
+// @route   POST api/auth/forgot-password
+// @desc    Forgot password
+router.post('/forgot-password', async (req, res) => {
+    const { username } = req.body;
+    try {
+        const user = await User.findOne({ username });
+        if (!user) {
+            return res.json({ msg: 'If a user with that email exists, a password reset link has been sent.' });
+        }
+
+        const token = crypto.randomBytes(20).toString('hex');
+        user.resetPasswordToken = token;
+        user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+        await user.save();
+
+        const resetURL = `https://budget.technickservices.com/reset-password/${token}`;
+
+        const mailOptions = {
+            from: 'admin@technickservices.com',
+            to: user.username,
+            subject: 'Password Reset Request',
+            text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n` +
+                  `Please click on the following link, or paste this into your browser to complete the process:\n\n` +
+                  `${resetURL}\n\n` +
+                  `If you did not request this, please ignore this email and your password will remain unchanged.\n`
+        };
+
+        nodemailerMailgun.sendMail(mailOptions, (err, data) => {
+            if (err) {
+                console.error('Error sending email:', err);
+            }
+            res.json({ msg: 'If a user with that email exists, a password reset link has been sent.' });
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   POST api/auth/reset-password/:token
+// @desc    Reset password
+router.post('/reset-password/:token', async (req, res) => {
+    try {
+        const user = await User.findOne({
+            resetPasswordToken: req.params.token,
+            resetPasswordExpires: { $gt: Date.now() },
+        });
+
+        if (!user) {
+            return res.status(400).json({ msg: 'Password reset token is invalid or has expired.' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(req.body.password, salt);
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+
+        res.json({ msg: 'Your password has been successfully reset.' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // @route   POST api/auth/delete-account
 // @desc    Delete user account and all associated data
-// @access  Private
 router.post('/delete-account', authMiddleware, async (req, res) => {
     const { password } = req.body;
     try {
@@ -121,27 +192,22 @@ router.post('/delete-account', authMiddleware, async (req, res) => {
             return res.status(404).json({ msg: 'User not found' });
         }
 
-        // Verify the user's password before deletion
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ msg: 'Incorrect password. Account not deleted.' });
         }
 
-        // Delete all associated data
         await Budget.deleteMany({ userId });
         await Expense.deleteMany({ userId });
         await Income.deleteMany({ userId });
-
-        // Finally, delete the user account itself
         await User.findByIdAndDelete(userId);
 
-        res.json({ msg: 'Account and all associated data have been permanently deleted.' });
+        res.json({ msg: 'Your account and all associated data have been permanently deleted.' });
 
     } catch (err) {
         console.error("Delete Account Error:", err.message);
         res.status(500).send('Server Error');
     }
 });
-
 
 module.exports = router;
