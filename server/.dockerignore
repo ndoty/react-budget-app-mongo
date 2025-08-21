@@ -2,7 +2,7 @@
 node_modules
 
 # Ignore local environment files
-.env
+#.env
 
 # Ignore log files
 npm-debug.log*

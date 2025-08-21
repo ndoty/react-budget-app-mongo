@@ -28,6 +28,9 @@ node_modules/
 # IMPORTANT: Be sure to commit a .env.example file with placeholder values
 .env*
 !.env.example
+jwt_secret.txt
+mongo_pass.txt
+mongo_user.txt
 
 # Logs
 # ----------------------------------------------------------------
@@ -65,3 +68,4 @@ ehthumbs_vista.db
 # Sublime Text
 *.sublime-project
 *.sublime-workspace
+
