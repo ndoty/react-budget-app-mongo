@@ -1,8 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
 import { Button, Stack, Container, Nav, Navbar, Form, NavDropdown } from "react-bootstrap";
-
-// Components
 import AddBudgetModal from "./components/AddBudgetModal";
 import AddExpenseModal from "./components/AddExpenseModal";
 import AddIncomeModal from "./components/AddIncomeModal";
@@ -20,15 +18,13 @@ import VersionFooter from "./components/VersionFooter";
 import ChangePasswordModal from "./components/ChangePasswordModal";
 import ImportDataModal from "./components/ImportDataModal";
 import DeleteAccountModal from "./components/DeleteAccountModal";
+import UpdateUsernameModal from "./components/UpdateUsernameModal";
 import Logo from './components/Logo';
 import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
-
-// Contexts & Hooks
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 
-// --- Authentication Pages ---
 function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -54,7 +50,7 @@ function LoginPage() {
         {error && <div className="alert alert-danger">{error}</div>}
         <Form onSubmit={handleSubmit}>
           <Form.Group id="username">
-            <Form.Label>Username</Form.Label>
+            <Form.Label>Email or Username</Form.Label>
             <Form.Control type="text" value={username} onChange={e => setUsername(e.target.value)} required />
           </Form.Group>
           <Form.Group id="password">
@@ -107,8 +103,8 @@ function RegisterPage() {
         {message && <div className="alert alert-success">{message}</div>}
         <Form onSubmit={handleSubmit}>
           <Form.Group id="username">
-            <Form.Label>Username</Form.Label>
-            <Form.Control type="text" value={username} onChange={e => setUsername(e.target.value)} required />
+            <Form.Label>Email Address</Form.Label>
+            <Form.Control type="email" value={username} onChange={e => setUsername(e.target.value)} required />
           </Form.Group>
           <Form.Group id="password">
             <Form.Label>Password</Form.Label>
@@ -128,7 +124,6 @@ function RegisterPage() {
   );
 }
 
-// --- Main application component for budgets ---
 function BudgetAppContent({ openAddExpenseModal, setShowAddBudgetModal, setShowAddIncomeModal, setViewExpensesModalBudgetId, setEditBudgetModalId, onViewIncomeClick, onViewBillsClick }) {
   const { budgets, getBudgetExpenses } = useBudgets();
   
@@ -162,7 +157,6 @@ function BudgetAppContent({ openAddExpenseModal, setShowAddBudgetModal, setShowA
   );
 }
 
-// --- Protected Route Component ---
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
 
@@ -177,13 +171,10 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-// --- Main Layout Component ---
 function AppLayout() {
   const { currentUser, logout } = useAuth();
   const { exportData } = useBudgets();
   const navigate = useNavigate();
-
-  // State for all modals
   const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [addExpenseModalBudgetId, setAddExpenseModalBudgetId] = useState();
@@ -199,6 +190,19 @@ function AppLayout() {
   const [showImportDataModal, setShowImportDataModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [addExpenseAsBill, setAddExpenseAsBill] = useState(false);
+  const [showUpdateUsernameModal, setShowUpdateUsernameModal] = useState(false);
+
+  const isEmail = (email) => {
+    if (!email) return false;
+    const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(String(email).toLowerCase());
+  };
+
+  useEffect(() => {
+    if (currentUser && !isEmail(currentUser.username)) {
+        setShowUpdateUsernameModal(true);
+    }
+  }, [currentUser]);
 
   const openAddExpenseModal = (budgetId, isBill = false) => {
     setShowAddExpenseModal(true);
@@ -216,10 +220,9 @@ function AppLayout() {
     openAddExpenseModal(null, true);
   };
 
-  // This new handler opens the Add Income modal from the View Income modal
   const handleAddIncomeClick = () => {
-    setShowViewIncomeModal(false); // Close the view modal
-    setShowAddIncomeModal(true); // Open the add modal
+    setShowViewIncomeModal(false);
+    setShowAddIncomeModal(true);
   };
 
   return (
@@ -278,7 +281,6 @@ function AppLayout() {
         </Routes>
       </main>
 
-      {/* All modals are rendered here */}
       <AddBudgetModal show={showAddBudgetModal} handleClose={() => setShowAddBudgetModal(false)} />
       <AddExpenseModal 
         show={showAddExpenseModal} 
@@ -296,7 +298,6 @@ function AppLayout() {
         onEditExpenseClick={(id) => { setViewExpensesModalBudgetId(); setEditExpenseId(id); }}
         onMoveExpenseClick={(id) => { setViewExpensesModalBudgetId(); setMoveExpenseModalId(id); }}
       />
-      {/* Pass the new handler to the ViewIncomeModal */}
       <ViewIncomeModal 
         show={showViewIncomeModal} 
         handleClose={() => setShowViewIncomeModal(false)} 
@@ -316,12 +317,12 @@ function AppLayout() {
       <ChangePasswordModal show={showChangePasswordModal} handleClose={() => setShowChangePasswordModal(false)} />
       <ImportDataModal show={showImportDataModal} handleClose={() => setShowImportDataModal(false)} />
       <DeleteAccountModal show={showDeleteAccountModal} handleClose={() => setShowDeleteAccountModal(false)} />
+      <UpdateUsernameModal show={showUpdateUsernameModal} handleClose={() => setShowUpdateUsernameModal(false)} />
       
       <VersionFooter />
     </div>
   );
 }
-
 
 function App() {
   return (

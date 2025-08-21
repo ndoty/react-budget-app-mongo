@@ -30,10 +30,23 @@ const mailgunAuth = {
 
 const nodemailerMailgun = nodemailer.createTransport(mg(mailgunAuth));
 
+// Email validation regex
+const isEmail = (email) => {
+    const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(String(email).toLowerCase());
+};
+
 // @route   POST api/auth/register
 // @desc    Register a new user
 router.post('/register', async (req, res) => {
     const { username, password } = req.body;
+    
+    // --- Validation block ---
+    if (!isEmail(username)) {
+        return res.status(400).json({ msg: 'Please use a valid email address as your username.' });
+    }
+    // --- End validation block ---
+
     try {
         let user = await User.findOne({ username });
         if (user) {
@@ -88,6 +101,57 @@ router.post('/login', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+
+// @route   POST api/auth/update-username
+// @desc    Update a user's username to a valid email
+// @access  Private
+router.post('/update-username', authMiddleware, async (req, res) => {
+    const { newUsername } = req.body;
+    const userId = req.user.id;
+
+    if (!isEmail(newUsername)) {
+        return res.status(400).json({ msg: 'Please provide a valid email address.' });
+    }
+
+    try {
+        const existingUser = await User.findOne({ username: newUsername });
+        if (existingUser) {
+            return res.status(400).json({ msg: 'This email is already in use by another account.' });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found.' });
+        }
+
+        user.username = newUsername;
+        await user.save();
+
+        // Create a new token with the updated username
+        const payload = {
+            user: {
+              id: user.id,
+              username: user.username
+            }
+        };
+
+        jwt.sign(
+            payload,
+            JWT_SECRET,
+            { expiresIn: '5 days' },
+            (err, token) => {
+                if (err) throw err;
+                // Send back the new user object and token
+                res.json({ token, user: { username: user.username }, msg: 'Username updated successfully.' });
+            }
+        );
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
 
 // @route   POST api/auth/change-password
 // @desc    Change user's password
@@ -148,7 +212,7 @@ router.post('/forgot-password', async (req, res) => {
             }
             res.json({ msg: 'If a user with that email exists, a password reset link has been sent.' });
         });
-    } catch (err) {
+    } catch (err)       {
         console.error(err.message);
         res.status(500).send('Server Error');
     }
