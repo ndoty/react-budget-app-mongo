@@ -24,7 +24,9 @@ import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
 import { UNCATEGORIZED_BUDGET_ID, useBudgets, BudgetsProvider } from "./contexts/BudgetsContext";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
+import { useTheme } from "./contexts/ThemeContext"; // Import useTheme
 
+// --- LoginPage Component ---
 function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -70,6 +72,7 @@ function LoginPage() {
   );
 }
 
+// --- RegisterPage Component ---
 function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -124,6 +127,7 @@ function RegisterPage() {
   );
 }
 
+// --- BudgetAppContent Component ---
 function BudgetAppContent({ openAddExpenseModal, setShowAddBudgetModal, setShowAddIncomeModal, setViewExpensesModalBudgetId, setEditBudgetModalId, onViewIncomeClick, onViewBillsClick }) {
   const { budgets, getBudgetExpenses } = useBudgets();
   
@@ -157,6 +161,7 @@ function BudgetAppContent({ openAddExpenseModal, setShowAddBudgetModal, setShowA
   );
 }
 
+// --- ProtectedRoute Component ---
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
 
@@ -171,9 +176,11 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+// --- AppLayout Component ---
 function AppLayout() {
   const { currentUser, logout } = useAuth();
   const { exportData } = useBudgets();
+  const { theme, toggleTheme } = useTheme(); // Get theme context
   const navigate = useNavigate();
   const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
@@ -236,7 +243,17 @@ function AppLayout() {
           <Navbar.Collapse id="basic-navbar-nav" className="justify-content-end">
             <Nav>
               {currentUser && (
-                <NavDropdown title={`Signed in as: ${currentUser.username}`} id="basic-nav-dropdown">
+                <NavDropdown title={`Signed in as: ${currentUser.username}`} id="basic-nav-dropdown" className="nav-dropdown">
+                  <NavDropdown.Item>
+                    <Form.Check 
+                      type="switch"
+                      id="theme-switch"
+                      label="Dark Mode"
+                      checked={theme === 'dark'}
+                      onChange={toggleTheme}
+                    />
+                  </NavDropdown.Item>
+                  <NavDropdown.Divider />
                   <NavDropdown.Item onClick={() => setShowChangePasswordModal(true)}>
                     Change Password
                   </NavDropdown.Item>
@@ -324,6 +341,7 @@ function AppLayout() {
   );
 }
 
+// --- App Component ---
 function App() {
   return (
     <Router>
