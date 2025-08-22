@@ -1,12 +1,21 @@
-// client/src/index.js
 import React from 'react';
-import ReactDOM from 'react-dom';
+import ReactDOM from 'react-dom/client';
 import App from './App';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { BudgetsProvider } from './contexts/BudgetsContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext'; // Import ThemeProvider
+import './themes.css'; // Import the new themes file
 
-ReactDOM.render(
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
   <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root')
+    <AuthProvider>
+      <BudgetsProvider>
+        <ThemeProvider>
+          <App />
+        </ThemeProvider>
+      </BudgetsProvider>
+    </AuthProvider>
+  </React.StrictMode>
 );
