@@ -61,7 +61,44 @@ export const AuthProvider = ({ children }) => {
       }
   };
 
-  // Function to delete the user's account
+  const forgotPassword = async (username) => {
+    try {
+      const response = await axios.post(`${API_URL_BASE}/auth/forgot-password`, { username });
+      return { success: true, message: response.data.msg };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.msg || "Failed to send reset email." };
+    }
+  };
+
+  const resetPassword = async (token, password) => {
+    try {
+      const response = await axios.post(`${API_URL_BASE}/auth/reset-password/${token}`, { password });
+      return { success: true, message: response.data.msg };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.msg || "Failed to reset password." };
+    }
+  };
+
+  const updateUsername = async (newUsername) => {
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.post(
+        `${API_URL_BASE}/auth/update-username`,
+        { newUsername },
+        { headers }
+      );
+      // Update state and local storage with new token and user info
+      setToken(response.data.token);
+      setCurrentUser(response.data.user);
+      return { success: true, message: response.data.msg };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.msg || "Failed to update username.",
+      };
+    }
+  };
+
   const deleteAccount = async (password) => {
       try {
           const headers = { Authorization: `Bearer ${token}` };
@@ -69,7 +106,6 @@ export const AuthProvider = ({ children }) => {
               { password },
               { headers }
           );
-          // On successful deletion, log the user out
           logout();
           return { success: true, message: response.data.msg };
       } catch (error) {
@@ -107,7 +143,10 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     changePassword,
-    deleteAccount, // Expose the new function
+    updateUsername,
+    deleteAccount,
+    forgotPassword,
+    resetPassword,
   };
 
   return (

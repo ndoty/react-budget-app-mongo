@@ -4,12 +4,14 @@ services:
     restart: unless-stopped
     ports:
       - "5001:5000"
+    # This line loads the entire .env file into the container's environment
     env_file: .env
 
   frontend:
     build:
       context: ./client
       args:
+        # These still read from the .env file on your machine during the build
         REACT_APP_API_URL: ${REACT_APP_API_URL}
         REACT_APP_WS_URL: ${REACT_APP_WS_URL}
         REACT_APP_VERSION: ${REACT_APP_VERSION}
