@@ -9,8 +9,7 @@
   --color-form-background: #ffffff;
   --color-form-border: #ced4da;
   --color-navbar-background: #f8f9fa;
-  --color-total-card-background: #f8f9fa;
-  --color-uncategorized-background: #dee2e6;
+  --color-gray-card-background: #f8f9fa; /* For Total and Uncategorized */
 }
 
 :root[data-theme="dark"] {
@@ -23,8 +22,7 @@
   --color-form-background: #2a2a2a;
   --color-form-border: #444;
   --color-navbar-background: #1e1e1e;
-  --color-total-card-background: #1e1e1e;
-  --color-uncategorized-background: #333;
+  --color-gray-card-background: #333; /* For Total and Uncategorized */
 
   /* --- Component Overrides --- */
 
@@ -75,17 +73,18 @@
   .text-muted {
     color: var(--color-text-muted) !important;
   }
-  #total-card {
-    background-color: var(--color-total-card-background);
+  
+  /* --- FIX FOR GRAY CARDS --- */
+  /* This rule targets cards with Bootstrap's 'bg-light' class in dark mode */
+  .card.bg-light {
+    background-color: var(--color-gray-card-background) !important;
   }
-  #uncategorized-card {
-    background-color: var(--color-uncategorized-background);
+  .card.bg-light .card-title,
+  .card.bg-light .card-text,
+  .card.bg-light .text-muted {
+    color: var(--color-text-primary) !important;
   }
-  #uncategorized-card .card-title,
-  #uncategorized-card .card-text,
-  #uncategorized-card .text-muted {
-    color: #e0e0e0 !important;
-  }
+  /* --- END FIX --- */
 
   /* Modals */
   .modal-content {
