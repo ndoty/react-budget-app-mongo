@@ -56,7 +56,7 @@ export default function TotalBudgetCard({ onViewIncomeClick, onViewBillsClick })
   }
 
   return (
-    <Card style={cardStyle}>
+    <Card style={cardStyle} id="total-card">
       <Card.Body>
         <Card.Title className="d-flex justify-content-between align-items-baseline fw-normal mb-3">
           <div className="me-2">Overall Balance</div>
