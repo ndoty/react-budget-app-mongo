@@ -74,21 +74,24 @@
     color: var(--color-text-muted) !important;
   }
   
-  /* FIX FOR GRAY CARDS */
+  /* --- FIX FOR GRAY CARDS --- */
   .card.bg-light {
     background-color: var(--color-gray-card-background) !important;
   }
-  .card.bg-light .card-title,
-  .card.bg-light .card-text,
-  .card.bg-light .text-muted {
+
+  /* --- FINAL FIX FOR CARD TEXT --- */
+  /* This rule specifically targets all text inside the gray cards */
+  .card.bg-light .card-body,
+  .card.bg-light .card-body .me-2,
+  .card.bg-light .card-body span {
     color: var(--color-text-primary) !important;
   }
-  
-  /* --- FIX FOR PROGRESS BAR TEXT --- */
-  /* This ensures text inside progress bars is always high contrast */
-  .progress-bar > div {
-    color: #ffffff !important;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* Adds a subtle shadow for readability */
+  /* This keeps the green/red colors on the values */
+  .card.bg-light .card-body .text-success {
+      color: #28a745 !important;
+  }
+  .card.bg-light .card-body .text-danger {
+      color: #dc3545 !important;
   }
   /* --- END FIX --- */
 
