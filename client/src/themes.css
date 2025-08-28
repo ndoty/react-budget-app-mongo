@@ -74,8 +74,7 @@
     color: var(--color-text-muted) !important;
   }
   
-  /* --- FIX FOR GRAY CARDS --- */
-  /* This rule targets cards with Bootstrap's 'bg-light' class in dark mode */
+  /* FIX FOR GRAY CARDS */
   .card.bg-light {
     background-color: var(--color-gray-card-background) !important;
   }
@@ -83,6 +82,13 @@
   .card.bg-light .card-text,
   .card.bg-light .text-muted {
     color: var(--color-text-primary) !important;
+  }
+  
+  /* --- FIX FOR PROGRESS BAR TEXT --- */
+  /* This ensures text inside progress bars is always high contrast */
+  .progress-bar > div {
+    color: #ffffff !important;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* Adds a subtle shadow for readability */
   }
   /* --- END FIX --- */
 
@@ -121,6 +127,6 @@
   
   /* Links */
   a {
-    color: #64b5f6; /* A nice light blue for dark mode links */
+    color: #64b5f6;
   }
 }
